@@ -17,6 +17,11 @@ type Session = {
   created_at: string
   active: boolean
   num_questions: number
+  lecture_id: string
+  lecture: {
+    id: string
+    name: string
+  }
 }
 
 // This data would typically come from your backend
@@ -47,8 +52,21 @@ export default function Sessions() {
         throw new Error('Failed to fetch sessions')
       }
       const data = await response.json()
+      
+      // Fetch lecture details for each session
+      const sessionsWithLectures = await Promise.all(data.map(async (session: Session) => {
+        if (!session.lecture_id) return session;
+        
+        const lectureResponse = await fetch(`http://localhost:8000/api/lectures/${session.lecture_id}`)
+        if (lectureResponse.ok) {
+          const lecture = await lectureResponse.json()
+          return { ...session, lecture }
+        }
+        return session
+      }))
+
       // Sort by created_at in descending order (newest first)
-      const sortedData = data.sort((a: Session, b: Session) => 
+      const sortedData = sessionsWithLectures.sort((a: Session, b: Session) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       setSessions(sortedData)
@@ -73,12 +91,6 @@ export default function Sessions() {
 
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Q&A Sessions</h1>
-          <Button size="lg" asChild>
-            <Link href="/add-session">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              New Session
-            </Link>
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-6">
@@ -92,7 +104,8 @@ export default function Sessions() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[100px] text-base">Session ID</TableHead>
-                    <TableHead className="w-[300px] text-base">Title</TableHead>
+                    <TableHead className="w-[200px] text-base">Title</TableHead>
+                    <TableHead className="w-[200px] text-base">Lecture</TableHead>
                     <TableHead className="text-base">Created</TableHead>
                     <TableHead className="text-right text-base">Questions</TableHead>
                     <TableHead className="text-right text-base">Status</TableHead>
@@ -108,6 +121,15 @@ export default function Sessions() {
                         </Link>
                       </TableCell>
                       <TableCell className="font-medium text-lg">{session.title}</TableCell>
+                      <TableCell className="text-lg">
+                        {session.lecture ? (
+                          <Link href={`/lectures/${session.lecture.id}`} className="hover:underline">
+                            {session.lecture.name}
+                          </Link>
+                        ) : (
+                          <span className="text-gray-500">No lecture</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-lg">
                         {format(new Date(session.created_at), "MMM d, yyyy h:mm a")}
                       </TableCell>

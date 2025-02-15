@@ -29,6 +29,11 @@ type Session = {
   active: boolean
   num_questions: number
   questions?: Question[]
+  lecture_id: string
+  lecture?: {
+    id: string
+    name: string
+  }
 }
 
 type ResponseCount = {
@@ -66,6 +71,15 @@ export default function SessionInsights() {
         }
         const data = await response.json()
         
+        // Fetch lecture details if lecture_id exists
+        if (data.lecture_id) {
+          const lectureResponse = await fetch(`http://localhost:8000/api/lectures/${data.lecture_id}`)
+          if (lectureResponse.ok) {
+            const lecture = await lectureResponse.json()
+            data.lecture = lecture
+          }
+        }
+
         // Add mock data for questions if session is not active
         if (!data.active) {
           const mockQuestions = Array.from({ length: data.num_questions }, (_, i) => ({
@@ -152,7 +166,11 @@ export default function SessionInsights() {
         <Breadcrumb
           items={[
             { label: "Home", href: "/" },
-            { label: "Sessions", href: "/sessions" },
+            { label: "Lectures", href: "/lectures" },
+            ...(session.lecture 
+              ? [{ label: session.lecture.name, href: `/lectures/${session.lecture.id}` }]
+              : [{ label: "Sessions", href: "/sessions" }]
+            ),
             { label: session.title, href: `/sessions/${session.short_id}` },
           ]}
         />
