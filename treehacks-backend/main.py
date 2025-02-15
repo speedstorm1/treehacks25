@@ -53,9 +53,16 @@ def test(request: TestRequest):
 def setup():
     download_lecture_and_slides()
     return {"message": "Setup complete"}
+
 class SessionCreate(BaseModel):
     title: str
     num_questions: int
+    lecture_id: str
+
+class LectureCreate(BaseModel):
+    name: str
+    slides: str | None = None
+    lecture_video: str | None = None
 
 class ResponseCreate(BaseModel):
     question_id: str
@@ -70,10 +77,10 @@ async def create_session(session: SessionCreate):
             'title': session.title,
             'short_id': short_id,
             'active': True,
-            'num_questions': session.num_questions
+            'num_questions': session.num_questions,
+            'lecture_id': session.lecture_id
         }).execute()
         
-        # Access the data directly from result.data
         return result.data[0]
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -135,7 +142,6 @@ async def close_session(short_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     return result.data[0]
-    
 
 @app.get("/api/sessions/questions/{short_id}")
 async def get_questions(short_id: str):
@@ -167,4 +173,36 @@ async def post_response(response_data: ResponseCreate):
         'response_text': response_text
     }).execute()
     
+    return result.data
+
+@app.post("/api/lectures")
+async def create_lecture(lecture: LectureCreate):
+    try:
+        result = supabase.table('lectures').insert({
+            'name': lecture.name,
+            'slides': lecture.slides,
+            'lecture_video': lecture.lecture_video
+        }).execute()
+        
+        return result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/lectures")
+async def list_lectures():
+    result = supabase.table('lectures').select('*').order('created_at', desc=True).execute()
+    return result.data
+
+@app.get("/api/lectures/{lecture_id}")
+async def get_lecture(lecture_id: str):
+    result = supabase.table('lectures').select('*').eq('id', lecture_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Lecture not found")
+    
+    return result.data[0]
+
+@app.get("/api/lectures/{lecture_id}/sessions")
+async def get_lecture_sessions(lecture_id: str):
+    result = supabase.table('sessions').select('*').eq('lecture_id', lecture_id).order('created_at', desc=True).execute()
     return result.data

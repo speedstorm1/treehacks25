@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, User, Bell, Menu } from "lucide-react"
+import { BookOpen, User, Bell, Menu, Video } from "lucide-react"
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -36,6 +36,14 @@ export function Sidebar() {
               <Link href="/assignments">
                 <BookOpen className="mr-2 h-4 w-4" />
                 <span>Assignments</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname.startsWith("/lectures")}>
+              <Link href="/lectures">
+                <Video className="mr-2 h-4 w-4" />
+                <span>Lectures</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
