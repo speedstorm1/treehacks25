@@ -117,9 +117,6 @@ def get_context_until_timestamp(lecture_id: str, session_id: str, timestamp: flo
         else:
             relevant_slides = []
             
-        if not relevant_slides:
-            raise ValueError(f"No relevant slides found before timestamp {timestamp}")
-        
         # Get transcript up to timestamp
         relevant_transcript = []
         for segment in transcription.get("segments", []):
@@ -176,7 +173,7 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         # Add the instruction prompt as the first content item
         prompt = """You are an expert teaching assistant helping to generate questions to test student understanding.
         Based on the lecture slides (shown as images) and transcript provided, generate 3 questions that test student comprehension
-        of the key concepts covered so far. Each question should:
+        of the key concepts covered so far. Each question should with an emphasis on the most recent slide shown and test big picture concepts:
         1. Test understanding, not just recall
         2. Be clear and unambiguous
         3. Focus on important concepts, not minor details
@@ -222,7 +219,7 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
             raise ValueError(f"Did not receive exactly 3 questions. Got {len(questions)} questions")
         
         # Validate each question has required fields
-        required_fields = {"question", "answer", "explanation", "concepts", "difficulty"}
+        required_fields = {"question"}
         for i, q in enumerate(questions):
             if not isinstance(q, dict):
                 raise ValueError(f"Question {i} is not a dictionary. Got type: {type(q)}")
