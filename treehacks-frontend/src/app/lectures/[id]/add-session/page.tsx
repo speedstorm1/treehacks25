@@ -55,7 +55,8 @@ export default function AddSession() {
         body: JSON.stringify({
           title,
           num_questions: parseInt(numQuestions),
-          lecture_id: lectureId
+          lecture_id: lectureId,
+          timestamp: parseFloat(timestamp)
         })
       })
 
