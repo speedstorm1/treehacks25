@@ -61,7 +61,7 @@ async def split_into_questions(text: str) -> List[Dict[str, str]]:
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
@@ -73,7 +73,7 @@ async def split_into_questions(text: str) -> List[Dict[str, str]]:
                 }
             ],
             response_format={"type": "json_object"},
-            temperature=0.1  # Low temperature for consistent parsing
+            temperature=0.05  # Low temperature for consistent parsing
         )
         
         result = json.loads(response.choices[0].message.content)
@@ -105,7 +105,7 @@ async def parse_and_store_questions(assignment_id: int, pdf_path: str) -> List[D
         for question in questions:
             # Insert question into homework_question table
             response = supabase.table("homework_question").insert({
-                "assignment_id": assignment_id,
+                "homework_id": assignment_id,
                 "problem_number": question["number"],
                 "text": question["text"]
             }).execute()
