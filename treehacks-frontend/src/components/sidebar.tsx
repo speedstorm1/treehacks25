@@ -17,8 +17,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 export function Sidebar() {
   const pathname = usePathname()
 
-  // Hide the sidebar if the current route is professor-setup
-  if (pathname === '/professor-setup') {
+  // Hide the sidebar if the current route is professor-setup or student path
+  if (pathname === '/professor-setup' || pathname.startsWith('/student')) {
     return null;
   }
 
@@ -36,6 +36,14 @@ export function Sidebar() {
               <Link href="/assignments">
                 <BookOpen className="mr-2 h-4 w-4" />
                 <span>Assignments</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === "/sessions"}>
+              <Link href="/sessions">
+                <BookOpen className="mr-2 h-4 w-4" />
+                <span>Sessions</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
