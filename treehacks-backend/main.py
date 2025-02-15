@@ -186,14 +186,14 @@ def transcribe_video_endpoint(video_name: str):
         )
     
     # Determine video path based on name
-    video_path = f"data/{'splits/' if video_name != 'lecture.mp4' else ''}{video_name}"
+    video_path = f"data/{video_name}"
 
 @app.post("/extract-audio")
 async def extract_audio_endpoint(request: ExtractAudioRequest):
     """Extract audio from a video file"""
     try:
         # Determine video path based on name
-        video_path = f"data/{'splits/' if request.video_name != 'lecture.mp4' else ''}{request.video_name}"
+        video_path = f"data/{request.video_name}"
         
         # Extract audio
         audio_path = extract_audio(video_path, test_mode=request.test_mode)
@@ -220,7 +220,7 @@ async def transcribe_endpoint(request: TranscribeRequest):
     """Transcribe a video file with word-level timestamps"""
     try:
         # Determine video path based on name
-        video_path = f"data/{'splits/' if request.video_name != 'lecture.mp4' else ''}{request.video_name}"
+        video_path = f"data/{request.video_name}"
         
         # Transcribe with timestamps
         result = transcribe_with_timestamps(video_path, test_mode=request.test_mode)
@@ -251,28 +251,34 @@ async def map_slides(video_path: str = Form(...), pdf_path: str = Form(...)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.post("/generate_questions")
-async def generate_questions_endpoint(timestamp: float):
-    """Generate questions based on lecture content up to timestamp"""
+@app.post("/api/generate-questions")
+async def generate_questions_endpoint(lecture_id: str, session_id: str):
+    """
+    Generate questions based on lecture content up to timestamp
+    """
     try:
-        # Get paths from most recent mappings
-        pdf_path = "./data/slides.pdf"  # Assuming this is where we store the PDF
-        transcript_path = "./transcriptions/transcription_lecture.json"
-        
-        # Generate questions
-        questions = generate_questions(timestamp, pdf_path, transcript_path)
-        
-        # Save questions
-        output_path = save_questions(questions, "./data/questions")
+        # Verify lecture exists
+        lecture_response = supabase.table('lectures').select('*').eq('id', lecture_id).single().execute()
+        if not lecture_response['data']:
+            raise HTTPException(status_code=404, detail=f"Lecture {lecture_id} not found")
+            
+        # Verify session exists
+        session_response = supabase.table('sessions').select('*').eq('id', session_id).single().execute()
+        if not session_response['data']:
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+            
+        # Generate and save questions
+        timestamp = lecture_response['data']['timestamp']
+        questions = generate_questions(lecture_id, session_id, timestamp)
         
         return {
-            "status": "success",
-            "questions": questions,
-            "saved_to": output_path
+            "success": True,
+            "message": f"Generated {len(questions)} questions",
+            "questions": questions
         }
         
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating questions: {str(e)}"
+        )
