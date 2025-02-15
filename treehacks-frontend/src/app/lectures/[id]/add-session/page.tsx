@@ -34,13 +34,19 @@ export default function AddSession() {
         if (!response.ok) throw new Error('Failed to fetch lecture')
         const data = await response.json()
         setLecture(data)
+        // Set default title when lecture data is loaded
+        const time = parseFloat(timestamp)
+        const minutes = Math.floor(time / 60)
+        const seconds = Math.floor(time % 60)
+        const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
+        setTitle(`Session @ ${timeStr}`)
       } catch (error) {
         console.error('Error fetching lecture:', error)
       }
     }
 
     fetchLecture()
-  }, [lectureId])
+  }, [lectureId, timestamp])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,7 +56,7 @@ export default function AddSession() {
       const response = await fetch('http://localhost:8000/api/sessions', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           title,
@@ -60,13 +66,13 @@ export default function AddSession() {
         })
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to create session')
-      }
+      if (!response.ok) throw new Error('Failed to create session')
 
-      router.push(`/lectures/${lectureId}`)
+      const data = await response.json()
+      router.push(`/sessions/${data.short_id}`)
     } catch (error) {
       console.error('Error creating session:', error)
+    } finally {
       setIsSubmitting(false)
     }
   }
