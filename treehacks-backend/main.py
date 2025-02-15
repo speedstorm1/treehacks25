@@ -268,7 +268,7 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
             raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
             
         # Generate and save questions
-        timestamp = lecture_response['data']['timestamp']
+        timestamp = session_response['data']['timestamp']
         questions = generate_questions(lecture_id, session_id, timestamp)
         
         return {
