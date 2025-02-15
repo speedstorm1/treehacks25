@@ -20,36 +20,50 @@ export default function Profile() {
   }
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/home" },
-          { label: "Profile", href: "/profile" },
-        ]}
-      />
+    <div className="min-h-full p-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Profile", href: "/profile" },
+          ]}
+        />
 
-      <Card className="max-w-2xl mx-auto">
-        <form onSubmit={handleSubmit}>
-          <CardHeader>
-            <CardTitle>User Profile</CardTitle>
-            <CardDescription>Manage your account settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit">Save Changes</Button>
-          </CardFooter>
-        </form>
-      </Card>
+        <h1 className="text-3xl font-bold">Profile Settings</h1>
+
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Personal Information</CardTitle>
+              <CardDescription className="text-base">Update your profile information</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-base">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-12 text-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-base">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-12 text-lg"
+                  />
+                </div>
+                <Button type="submit" size="lg">Save Changes</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
-

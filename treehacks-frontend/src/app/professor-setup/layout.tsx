@@ -5,7 +5,7 @@ export default function ProfessorSetupLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center">
+    <div className="absolute inset-0 flex items-center justify-center p-4">
       {children}
     </div>
   )
