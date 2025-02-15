@@ -131,7 +131,7 @@ export default function LecturePage() {
                             {session.title}
                           </CardTitle>
                           <Button variant="outline" asChild>
-                            <Link href={`/sessions/${session.id}`}>
+                            <Link href={`/sessions/${session.short_id}`}>
                               View Session
                             </Link>
                           </Button>
