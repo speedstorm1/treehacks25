@@ -46,36 +46,43 @@ export default function TopicMastery() {
   ]
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/home" },
-          { label: topicData.name, href: `/topics/${topicId}` },
-        ]}
-      />
+    <div className="min-h-full p-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/home" },
+            { label: topicData.name, href: `/topics/${topicId}` },
+          ]}
+        />
 
-      <h1 className="text-3xl font-bold">{topicData.name}</h1>
+        <h1 className="text-3xl font-bold">{topicData.name}</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{topicData.name} Mastery</CardTitle>
-          <CardDescription>Current mastery level for this topic</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CustomPieChart data={pieData} />
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">{topicData.name} Mastery</CardTitle>
+              <CardDescription className="text-base">Current mastery level for this topic</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <div className="w-full">
+                <CustomPieChart data={pieData} />
+              </div>
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mastery Progress</CardTitle>
-          <CardDescription>Topic mastery across assignments</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LineGraph data={topicData.assignmentProgress} />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Mastery Progress</CardTitle>
+              <CardDescription className="text-base">Topic mastery across assignments</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <div className="w-full">
+                <LineGraph data={topicData.assignmentProgress} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
-
