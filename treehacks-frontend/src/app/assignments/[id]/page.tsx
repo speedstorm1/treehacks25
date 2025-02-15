@@ -46,39 +46,42 @@ export default function AssignmentInsights() {
   }
 
   return (
-    <div className="space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Home", href: "/home" },
-          { label: "Assignments", href: "/assignments" },
-          { label: assignmentData.name, href: `/assignments/${assignmentId}` },
-        ]}
-      />
+    <div className="min-h-full p-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/home" },
+            { label: "Assignments", href: "/assignments" },
+            { label: assignmentData.name, href: `/assignments/${assignmentId}` },
+          ]}
+        />
 
-      <h1 className="text-3xl font-bold">{assignmentData.name} Insights</h1>
+        <h1 className="text-3xl font-bold">{assignmentData.name} Insights</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-          <CardDescription>Overall performance and common errors</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>{assignmentData.summary}</p>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Summary</CardTitle>
+              <CardDescription className="text-base">Overall performance and common errors</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <p className="text-lg">{assignmentData.summary}</p>
+            </CardContent>
+          </Card>
 
-      {assignmentData.questions.map((question) => (
-        <Card key={question.id}>
-          <CardHeader>
-            <CardTitle>{question.text}</CardTitle>
-            <CardDescription>Common errors for this question</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CustomPieChart data={question.errors} />
-          </CardContent>
-        </Card>
-      ))}
+          {assignmentData.questions.map((question) => (
+            <Card key={question.id}>
+              <CardHeader className="p-8">
+                <CardTitle className="text-2xl">{question.text}</CardTitle>
+                <CardDescription className="text-base">Common errors for this question</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
+                <CustomPieChart data={question.errors} />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
-

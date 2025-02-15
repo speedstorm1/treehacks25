@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, BookOpen, User, Bell, Menu } from "lucide-react"
+import { BookOpen, User, Bell, Menu } from "lucide-react"
 import {
   Sidebar as ShadcnSidebar,
   SidebarContent,
@@ -25,18 +25,12 @@ export function Sidebar() {
   const SidebarItems = (
     <>
       <SidebarHeader>
-        <h2 className="text-xl font-bold">Classroom Analytics</h2>
+        <Link href="/" className="hover:opacity-80">
+          <h2 className="text-xl font-bold">Teacher's Pet</h2>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === "/home"}>
-              <Link href="/home">
-                <Home className="mr-2 h-4 w-4" />
-                <span>Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname.startsWith("/assignments")}>
               <Link href="/assignments">

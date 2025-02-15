@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/sidebar"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Classroom Analytics",
+  title: "Teacher's Pet",
   description: "Analytics dashboard for classroom performance",
 }
 
@@ -18,16 +18,19 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} h-full`}>
         <SidebarProvider>
-          <div className="flex flex-col md:flex-row min-h-screen">
+          <div className="flex h-full w-full">
             <Sidebar />
-            <main className="flex-1 p-4 md:p-8 overflow-y-auto">{children}</main>
+            <div className="flex-1 min-w-0 overflow-x-hidden">
+              <main className="h-full w-full">
+                {children}
+              </main>
+            </div>
           </div>
         </SidebarProvider>
       </body>
     </html>
   )
 }
-

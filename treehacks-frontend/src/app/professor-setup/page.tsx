@@ -34,62 +34,60 @@ export default function ProfessorSetup() {
   }
 
   return (
-    <div className="w-full p-4">
-      <Card className="w-full max-w-3xl mx-auto">
-        <form onSubmit={handleSubmit}>
-          <CardHeader className="pb-4">
-            <CardTitle>Professor Setup</CardTitle>
-            <CardDescription>Set up your class details and syllabus</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="class-name">Class Name</Label>
-                <Input id="class-name" value={className} onChange={(e) => setClassName(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="class-code">Class Code</Label>
-                <Input id="class-code" value={classCode} onChange={(e) => setClassCode(e.target.value)} required />
-              </div>
+    <Card className="w-full max-w-3xl">
+      <form onSubmit={handleSubmit}>
+        <CardHeader className="pb-4">
+          <CardTitle>Professor Setup</CardTitle>
+          <CardDescription>Set up your class details and syllabus</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="class-name">Class Name</Label>
+              <Input id="class-name" value={className} onChange={(e) => setClassName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="student-count">Number of Students</Label>
-              <Input
-                id="student-count"
-                type="number"
-                value={studentCount}
-                onChange={(e) => setStudentCount(e.target.value)}
-                required
-              />
+              <Label htmlFor="class-code">Class Code</Label>
+              <Input id="class-code" value={classCode} onChange={(e) => setClassCode(e.target.value)} required />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="student-count">Number of Students</Label>
+            <Input
+              id="student-count"
+              type="number"
+              value={studentCount}
+              onChange={(e) => setStudentCount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="syllabus">Upload Syllabus</Label>
+            <Textarea
+              id="syllabus"
+              value={syllabus}
+              onChange={handleSyllabusUpload}
+              placeholder="Paste your syllabus here..."
+              rows={4}
+              required
+            />
+          </div>
+          {topics.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="syllabus">Upload Syllabus</Label>
-              <Textarea
-                id="syllabus"
-                value={syllabus}
-                onChange={handleSyllabusUpload}
-                placeholder="Paste your syllabus here..."
-                rows={4}
-                required
-              />
+              <Label>Generated Topics</Label>
+              <ul className="list-disc pl-5 max-h-40 overflow-y-auto">
+                {topics.map((topic, index) => (
+                  <li key={index}>{topic}</li>
+                ))}
+              </ul>
+              <p className="text-sm text-muted-foreground mt-1">You can modify these topics after submission.</p>
             </div>
-            {topics.length > 0 && (
-              <div className="space-y-2">
-                <Label>Generated Topics</Label>
-                <ul className="list-disc pl-5 max-h-40 overflow-y-auto">
-                  {topics.map((topic, index) => (
-                    <li key={index}>{topic}</li>
-                  ))}
-                </ul>
-                <p className="text-sm text-muted-foreground mt-1">You can modify these topics after submission.</p>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="pt-2">
-            <Button type="submit">Save and Continue</Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+          )}
+        </CardContent>
+        <CardFooter className="pt-2">
+          <Button type="submit">Save and Continue</Button>
+        </CardFooter>
+      </form>
+    </Card>
   )
 }
