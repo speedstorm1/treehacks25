@@ -32,7 +32,6 @@ def add_answer_insight(question_id: int, question_text: str, answer_text: str):
     )
     
     insight = response.choices[0].message.content
-    print(insight)
 
     # add to homework_answer_insight table
     response = supabase.table("homework_answer_insight").insert({
