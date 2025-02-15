@@ -1,9 +1,9 @@
 import os
-import requests
+import gdown
 
 def download_file(file_id: str, save_path: str) -> bool:
     """
-    Downloads a file from Google Drive using direct download link.
+    Downloads a file from Google Drive using gdown.
     Just make the file shareable with 'Anyone with the link' in Google Drive.
     
     Args:
@@ -11,19 +11,14 @@ def download_file(file_id: str, save_path: str) -> bool:
         save_path (str): Where to save the file
     """
     try:
-        # Create the direct download link
-        url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        
-        # Download the file
-        response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad status codes
-        
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         
-        # Save the file
-        with open(save_path, 'wb') as f:
-            f.write(response.content)
+        # Create the direct download URL
+        url = f"https://drive.google.com/uc?id={file_id}"
+        
+        # Download the file using gdown
+        gdown.download(url, save_path, quiet=False)
             
         print(f"File downloaded successfully to {save_path}")
         return True
@@ -54,8 +49,8 @@ def download_files_to_data(file_ids: list[str]) -> list[str]:
 
 
 def download_lecture_and_slides():
-    lecture_file_id = "1za5cTP95T0XxvOhR_NXW5SVx0OuWDJkZ"  # From the second part of the concatenated URL
-    slides_file_id = "1G8dZEF49OhJ5OjE6iCVp5lEbs1R5P2c6"
+    slides_file_id = "1za5cTP95T0XxvOhR_NXW5SVx0OuWDJkZ"
+    lecture_file_id = "1G8dZEF49OhJ5OjE6iCVp5lEbs1R5P2c6"
     
     # Download both files
     paths = download_files_to_data([lecture_file_id, slides_file_id])
@@ -65,4 +60,11 @@ def download_lecture_and_slides():
         os.rename(paths[0], "data/lecture.mp4")
         os.rename(paths[1], "data/slides.pdf")
         return ["data/lecture.mp4", "data/slides.pdf"]
+
+    """ 
+    Run this command to generate splits for testing:
+    mkdir -p data/splits && ffmpeg -i data/lecture.mp4 -t 300 -c copy data/splits/first_5min.mp4 && ffmpeg -i data/lecture.mp4 -t 600 -c copy data/splits/first_10min.mp4 && ffmpeg -i data/lecture.mp4 -t 1200 -c copy data/splits/first_20min.mp4
+    """
     return paths
+
+

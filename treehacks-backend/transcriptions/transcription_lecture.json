@@ -1,0 +1,45 @@
+{
+  "text": "reflected in convolutional neural networks. Locality is reflected in the local receptive field. So these are properties of the visual world. They're also some of this property of cortex as well, although I don't think it does convolutions. But it does show quite a bit of translation invariance, and receptive fields do get larger the deeper you go into your brain. And so when we talk about receptive fields, we're going to talk about the part of the image that drives that neuron.",
+  "segments": [
+    {
+      "text": "reflected in convolutional neural networks.",
+      "start": 210.0,
+      "end": 213.85999989509583
+    },
+    {
+      "text": "Locality is reflected in the local receptive field.",
+      "start": 216.38000011444092,
+      "end": 221.46000003814697
+    },
+    {
+      "text": "So these are properties of the visual world.",
+      "start": 221.7200002670288,
+      "end": 224.31999969482422
+    },
+    {
+      "text": "They're also some of this property of cortex as well, although I don't think it does convolutions.",
+      "start": 224.5600004196167,
+      "end": 237.29999923706055
+    },
+    {
+      "text": "But it does show quite a bit of translation invariance,",
+      "start": 238.02000045776367,
+      "end": 242.02000045776367
+    },
+    {
+      "text": "and receptive fields do get larger the deeper you go into your brain.",
+      "start": 242.88000106811523,
+      "end": 247.04000091552734
+    },
+    {
+      "text": "And so when we talk about receptive fields,",
+      "start": 248.93999862670898,
+      "end": 251.2599983215332
+    },
+    {
+      "text": "we're going to talk about the part of the image that drives that neuron.",
+      "start": 251.36000061035156,
+      "end": 254.77999877929688
+    }
+  ]
+}
