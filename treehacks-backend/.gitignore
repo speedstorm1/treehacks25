@@ -30,6 +30,7 @@ service-account.json
 data/
 *.mp4
 *.pdf
+audio/
 
 # Virtual Environment
 venv/

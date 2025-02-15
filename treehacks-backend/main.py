@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -9,12 +9,15 @@ from models import *
 from drive_utils import download_lecture_and_slides
 import os
 from supabase import create_client, Client
+from video_utils import extract_audio
+from speech_to_text import transcribe_with_timestamps
+from slide_utils import map_slides_to_video
+from question_gen import generate_questions, save_questions
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
-
 
 app = FastAPI(
     title="Treehacks API",
@@ -47,7 +50,6 @@ def generate_short_id(length: int = 5) -> str:
 @app.post("/test", response_model=TestResponse)
 def test(request: TestRequest):
     return TestResponse(response=f"Your request was: {request.text}")
-
 
 @app.post("/setup")
 def setup():
@@ -219,3 +221,114 @@ async def get_lecture(lecture_id: str):
 async def get_lecture_sessions(lecture_id: str):
     result = supabase.table('sessions').select('*').eq('lecture_id', lecture_id).order('created_at', desc=True).execute()
     return result.data
+@app.post("/transcribe/{video_name}")
+def transcribe_video_endpoint(video_name: str):
+    """
+    Transcribe a video file and return text with timestamps.
+    Video name should be one of: lecture.mp4, first_5min.mp4, first_10min.mp4, first_20min.mp4
+    """
+    valid_videos = ["lecture.mp4", "first_5min.mp4", "first_10min.mp4", "first_20min.mp4"]
+    
+    if video_name not in valid_videos:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid video name. Must be one of: {', '.join(valid_videos)}"
+        )
+    
+    # Determine video path based on name
+    video_path = f"data/{video_name}"
+
+@app.post("/extract-audio")
+async def extract_audio_endpoint(request: ExtractAudioRequest):
+    """Extract audio from a video file"""
+    try:
+        # Determine video path based on name
+        video_path = f"data/{request.video_name}"
+        
+        # Extract audio
+        audio_path = extract_audio(video_path, test_mode=request.test_mode)
+        
+        if not audio_path:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to extract audio from video"
+            )
+        
+        return {
+            "message": f"Successfully extracted audio from {request.video_name}",
+            "audio_path": audio_path
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+@app.post("/transcribe")
+async def transcribe_endpoint(request: TranscribeRequest):
+    """Transcribe a video file with word-level timestamps"""
+    try:
+        # Determine video path based on name
+        video_path = f"data/{request.video_name}"
+        
+        # Transcribe with timestamps
+        result = transcribe_with_timestamps(video_path, test_mode=request.test_mode)
+        
+        if not result:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to transcribe video"
+            )
+        
+        return {
+            "message": f"Successfully transcribed {request.video_name}",
+            "results": result
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+@app.post("/map-slides")
+async def map_slides(video_path: str = Form(...), pdf_path: str = Form(...)):
+    """Map slides from PDF to video timestamps"""
+    try:
+        result = map_slides_to_video(video_path, pdf_path)
+        return {"status": "success", "data": result}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/generate-questions")
+async def generate_questions_endpoint(lecture_id: str, session_id: str):
+    """
+    Generate questions based on lecture content up to timestamp
+    """
+    try:
+        # Verify lecture exists
+        lecture_response = supabase.table('lectures').select('*').eq('id', lecture_id).single().execute()
+        if not lecture_response['data']:
+            raise HTTPException(status_code=404, detail=f"Lecture {lecture_id} not found")
+            
+        # Verify session exists
+        session_response = supabase.table('sessions').select('*').eq('id', session_id).single().execute()
+        if not session_response['data']:
+            raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+            
+        # Generate and save questions
+        timestamp = session_response['data']['timestamp']
+        questions = generate_questions(lecture_id, session_id, timestamp)
+        
+        return {
+            "success": True,
+            "message": f"Generated {len(questions)} questions",
+            "questions": questions
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating questions: {str(e)}"
+        )
