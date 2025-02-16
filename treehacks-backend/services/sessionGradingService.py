@@ -28,7 +28,7 @@ async def grade_session(short_id: str):
         # for each question in the session:
         for i in range(0, num_questions):
             # get question_id, question_text from "session_questions" by session_id and question_number
-            result = supabase.table("session_questions").select("id", "question_text").eq("session_id", session_id).eq("question_number", i).execute()
+            result = supabase.table("session_questions").select("id", "question_text", "total_submission", "correct_submission").eq("session_id", session_id).eq("question_number", i).execute()
             question_id = result.data[0]["id"]
             question_text = result.data[0]["question_text"]
 
@@ -41,13 +41,13 @@ async def grade_session(short_id: str):
                 # call questionGradingService to grade it given the problem statement and the student's answer
                 grade = await grade_student_answer(question_id, question_text, answer)
                 # add 1 to the "total_submission" column of the session_questions table for this question_id
-                supabase.table("session_questions").update({"total_submission": question_response.data[0].get("total_submission") + 1}).eq("id", question_id).execute()
+                supabase.table("session_questions").update({"total_submission": result.data[0].get("total_submission") + 1}).eq("id", question_id).execute()
                 # if incorrect, call add_session_answer_insight
                 if grade == "0":
                     add_session_answer_insight(question_id, question_text, answer)
                 # if correct, add 1 to the "correct_submission" column of the session_questions table for this question_id
                 if grade == "1":
-                    supabase.table("session_questions").update({"correct_submission": question_response.data[0].get("correct_submission") + 1}).eq("id", question_id).execute()
+                    supabase.table("session_questions").update({"correct_submission": result.data[0].get("correct_submission") + 1}).eq("id", question_id).execute()
     
     except Exception as e:
         raise Exception(f"Error processing session: {str(e)}")
