@@ -22,7 +22,8 @@ from PyPDF2 import PdfReader
 from datetime import datetime
 from fastapi import File, UploadFile
 from services.questionParsingService import parse_and_store_questions
-
+from services.sessionService import publish_session_question_extracted_insight, publish_session_summary
+from services.sessionGradingService import grade_session
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -674,4 +675,22 @@ async def get_assignment_question_topics(question_id: int):
         return topics_response.data
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sessions/{short_id}/run-nlp")
+async def run_session_grading_nlp(short_id: str):
+    short_id = short_id.upper()
+    
+    try:
+        await grade_session(short_id)
+        insight_result = publish_session_question_extracted_insight(short_id)
+        summary_result = publish_session_summary(short_id)
+        
+        return {
+            "message": "NLP processing completed successfully",
+            "insight_result": insight_result,
+            "summary_result": summary_result
+        }
+    except Exception as e:
+        print(f"Error in run_session_nlp: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

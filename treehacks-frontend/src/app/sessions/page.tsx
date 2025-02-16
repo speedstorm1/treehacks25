@@ -77,6 +77,45 @@ export default function Sessions() {
     }
   }
 
+  const handleRunNLP = async (sessionId: string) => {
+    try {
+      // setProcessingNLP(assignmentId);
+      const sessionResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/run-nlp`, {
+        method: 'POST',
+      });
+
+      if (!sessionResponse.ok) throw new Error('Failed to run NLP processing');
+      const response = await fetch(`http://localhost:8000/api/sessions?class_id=${classId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch sessions')
+      }
+      const data = await response.json()
+      
+      // Fetch lecture details for each session
+      const sessionsWithLectures = await Promise.all(data.map(async (session: Session) => {
+        if (!session.lecture_id) return session;
+        
+        const lectureResponse = await fetch(`http://localhost:8000/api/lectures/${session.lecture_id}`)
+        if (lectureResponse.ok) {
+          const lecture = await lectureResponse.json()
+          return { ...session, lecture }
+        }
+        return session
+      }))
+
+      // Sort by created_at in descending order (newest first)
+      const sortedData = sessionsWithLectures.sort((a: Session, b: Session) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      setSessions(sortedData)
+    } catch (error) {
+      console.error('Error fetching sessions:', error)
+    } finally {
+      // setProcessingNLP(null);
+    }
+  };
+
+
   useEffect(() => {
     fetchSessions()
   }, [])
@@ -145,8 +184,8 @@ export default function Sessions() {
                         {session.active && (
                           <CloseSessionButton 
                             sessionId={session.short_id} 
-                            onSessionClosed={fetchSessions}
-                            size="sm"
+                            onClose={() => handleRunNLP(session.short_id)}
+                            // size="sm"
                           />
                         )}
                       </TableCell>
