@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Breadcrumb } from "@/components/breadcrumb"
 import Link from "next/link"
-import { BookOpen } from "lucide-react"
+import { BookOpen, PlusCircle } from "lucide-react"
 import { Suspense, useEffect, useState, useCallback } from "react"
 import { LectureContent } from "./lecture-content"
 import { useParams } from "next/navigation"
+import { useClass } from "@/app/context/ClassContext"
 
 interface Lecture {
   id: string
@@ -43,6 +44,7 @@ async function getSessions(lectureId: string) {
 export default function LecturePage() {
   const params = useParams()
   const lectureId = params?.id as string
+  const { classId } = useClass()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -53,11 +55,8 @@ export default function LecturePage() {
   }, [])
 
   useEffect(() => {
-    async function fetchData() {
-      if (!lectureId) return
-      
+    const fetchData = async () => {
       try {
-        setIsLoading(true)
         const [lectureData, sessionsData] = await Promise.all([
           getLecture(lectureId),
           getSessions(lectureId)
@@ -74,80 +73,70 @@ export default function LecturePage() {
     fetchData()
   }, [lectureId])
 
-  if (isLoading || !lecture) {
-    return (
-      <div className="min-h-full p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <LectureLoadingSkeleton />
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <LectureLoadingSkeleton />
+  }
+
+  if (!lecture) {
+    return <div>Lecture not found</div>
   }
 
   return (
     <div className="min-h-full p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/home" },
+            { label: "Lectures", href: "/lectures" },
+            { label: lecture.name, href: `/lectures/${lecture.id}` },
+          ]}
+        />
+
         <div className="flex justify-between items-center">
-          <Breadcrumb
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Lectures", href: "/lectures" },
-              { label: lecture.name, href: `/lectures/${lecture.id}` },
-            ]}
-          />
-          <Button asChild>
+          <h1 className="text-3xl font-bold">{lecture.name}</h1>
+          <Button size="lg" asChild>
             <Link href={`/lectures/${lecture.id}/add-session?timestamp=${currentTime}`}>
-              Create Session
+              <PlusCircle className="mr-2 h-5 w-5" />
+              New Learning Check
             </Link>
           </Button>
         </div>
 
-        <h1 className="text-3xl font-bold">{lecture.name}</h1>
+        <div className="grid grid-cols-1 gap-8">
+          <Suspense fallback={<LectureContentSkeleton />}>
+            <LectureContent 
+              lecture={lecture} 
+              onTimeUpdate={handleTimeUpdate}
+            />
+          </Suspense>
 
-        <div className="grid gap-6">
-          <LectureContent 
-            lecture={lecture} 
-            onTimeUpdate={handleTimeUpdate}
-          />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Sessions
-              </CardTitle>
-              <CardDescription>
-                Active learning sessions for this lecture
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {sessions.length > 0 ? (
-                <div className="space-y-4">
-                  {sessions.map((session) => (
-                    <Card key={session.id}>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">
-                            {session.title}
-                          </CardTitle>
-                          <Button variant="outline" asChild>
-                            <Link href={`/sessions/${session.short_id}`}>
-                              View Session
-                            </Link>
-                          </Button>
-                        </div>
-                        <CardDescription>
-                          {session.num_questions} questions • Session ID: {session.short_id}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No sessions created yet</p>
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Learning Checks</h2>
+            <div className="grid gap-4">
+              {sessions.map((session) => (
+                <Link key={session.id} href={`/sessions/${session.short_id}`}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5" />
+                        {session.title}
+                      </CardTitle>
+                      <CardDescription>
+                        {session.num_questions} questions
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
+              {sessions.length === 0 && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground">No learning checks available for this lecture</p>
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -156,15 +145,20 @@ export default function LecturePage() {
 
 function LectureLoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="h-4 bg-muted rounded w-48" />
-      <div className="h-8 bg-muted rounded w-64" />
-      <div className="space-y-4">
-        <div className="h-[400px] bg-muted rounded" />
-        <div className="space-y-2">
-          <div className="h-4 bg-muted rounded w-32" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-24 bg-muted rounded" />
+    <div className="min-h-full p-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-64 bg-muted rounded animate-pulse" />
+        <div className="grid grid-cols-1 gap-8">
+          <LectureContentSkeleton />
+          <div className="space-y-4">
+            <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-24 bg-muted rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -173,9 +167,9 @@ function LectureLoadingSkeleton() {
 
 function LectureContentSkeleton() {
   return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-[400px] bg-muted rounded" />
-      <div className="h-4 bg-muted rounded w-32" />
+    <div className="space-y-4">
+      <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+      <div className="h-[400px] bg-muted rounded animate-pulse" />
     </div>
   )
 }

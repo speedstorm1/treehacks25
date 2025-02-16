@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { CloseSessionButton } from "@/components/close-session-button"
+import { useClass } from "../context/ClassContext"
 
 type Session = {
   id: string
@@ -44,10 +45,11 @@ type Session = {
 
 export default function Sessions() {
   const [sessions, setSessions] = useState<Session[]>([])
+  const { classId } = useClass()
 
   const fetchSessions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/sessions')
+      const response = await fetch(`http://localhost:8000/api/sessions?class_id=${classId}`)
       if (!response.ok) {
         throw new Error('Failed to fetch sessions')
       }
@@ -84,20 +86,20 @@ export default function Sessions() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
-            { label: "Sessions", href: "/sessions" },
+            { label: "Home", href: "/home" },
+            { label: "Learning Checks", href : "/sessions" },
           ]}
         />
 
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Q&A Sessions</h1>
+          <h1 className="text-3xl font-bold">Learning Checks</h1>
         </div>
 
         <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader className="p-8">
-              <CardTitle className="text-2xl">All Sessions</CardTitle>
-              <CardDescription className="text-base">View and manage all lecture Q&A sessions</CardDescription>
+              <CardTitle className="text-2xl">All Learning Check Sessions</CardTitle>
+              <CardDescription className="text-base">View and manage all lecture learning check pop quizzes</CardDescription>
             </CardHeader>
             <CardContent className="p-8 pt-0">
               <Table>

@@ -1,86 +1,150 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import { ProgressBar } from "@/components/progress-bar"
-import { Breadcrumb } from "@/components/breadcrumb"
+import { useRouter } from "next/navigation"
+import { useClass } from "./context/ClassContext"
+import { useEffect, useState } from "react"
+import { createClient } from "@supabase/supabase-js"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-// This would typically come from your backend
-const overallProgress = 75
-const topics = [
-  { id: 1, name: "Introduction to Programming", mastery: 95 },
-  { id: 2, name: "Data Structures", mastery: 80 },
-  { id: 3, name: "Algorithms", mastery: 70 },
-  { id: 4, name: "Object-Oriented Programming", mastery: 85 },
-  { id: 5, name: "Database Management", mastery: 60 },
-]
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-function getColorForMastery(mastery: number): string {
-  if (mastery >= 80) return "#22c55e" // green-500
-  if (mastery >= 60) return "#eab308" // yellow-500
-  return "#ef4444" // red-500
+interface Class {
+  id: string
+  title: string
+  created_at: string
+  syllabus: string | null
 }
 
 export default function Home() {
-  const [filterQuery, setFilterQuery] = useState("")
+  const router = useRouter()
+  const { setClassId } = useClass()
+  const [classes, setClasses] = useState<Class[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [newClassName, setNewClassName] = useState("")
 
-  const filteredTopics = topics.filter((topic) => topic.name.toLowerCase().includes(filterQuery.toLowerCase()))
+  useEffect(() => {
+    fetchClasses()
+  }, [])
+
+  const fetchClasses = async () => {
+    try {
+      const { data } = await supabase.from("class").select("*")
+      setClasses(data || [])
+    } catch (error) {
+      console.error("Error fetching classes:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleAddClass = async () => {
+    if (!newClassName.trim()) return
+
+    try {
+      const { data, error } = await supabase
+        .from("class")
+        .insert([{ title: newClassName.trim() }])
+        .select()
+
+      if (error) throw error
+
+      setClasses([...(data || []), ...classes])
+      setNewClassName("")
+      setIsDialogOpen(false)
+    } catch (error) {
+      console.error("Error adding class:", error)
+    }
+  }
+
+  const handleSelectClass = (classId: string) => {
+    setClassId(classId)
+    router.push("/home")
+  }
 
   return (
-    <div className="min-h-full p-8">
-      <div className="max-w-[2000px] mx-auto space-y-8">
-        <Breadcrumb items={[{ label: "Home", href: "/" }]} />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight">Welcome to Teacher&apos;s Pet</h1>
+            <p className="text-lg text-muted-foreground">
+              Select a class to get started or create a new one
+            </p>
+          </div>
 
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl">Overall Class Progress</CardTitle>
-              <CardDescription className="text-base">Mastery across all topics</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0">
-              <div className="w-full">
-                <ProgressBar value={overallProgress} label={`Overall Mastery: ${overallProgress}%`} color={getColorForMastery(overallProgress)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl">Topic Mastery</CardTitle>
-              <CardDescription className="text-base">Sorted by mastery percentage</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0">
-              <div className="space-y-6">
-                <div className="w-full">
-                  <Label htmlFor="filter-topics" className="text-base">Filter Topics</Label>
-                  <Input
-                    id="filter-topics"
-                    placeholder="Type to filter topics..."
-                    value={filterQuery}
-                    onChange={(e) => setFilterQuery(e.target.value)}
-                    className="h-12 text-lg"
-                  />
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Your Classes</h2>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-5 w-5" />
+                  New Class
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Class</DialogTitle>
+                  <DialogDescription>
+                    Add a new class to manage lectures and sessions
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Class Name</Label>
+                    <Input
+                      id="name"
+                      value={newClassName}
+                      onChange={(e) => setNewClassName(e.target.value)}
+                      placeholder="Enter class name"
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {filteredTopics
-                    .sort((a, b) => b.mastery - a.mastery)
-                    .map((topic) => (
-                      <Link href={`/topics/${topic.id}`} key={topic.id} className="block hover:opacity-80">
-                        <div className="p-8 rounded-lg border bg-card">
-                          <div className="mb-4 text-xl font-medium">{topic.name}</div>
-                          <ProgressBar value={topic.mastery} label={`${topic.mastery}% Mastery`} color={getColorForMastery(topic.mastery)} />
-                        </div>
-                      </Link>
-                    ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                <DialogFooter>
+                  <Button
+                    onClick={handleAddClass}
+                    disabled={!newClassName.trim()}
+                  >
+                    Create Class
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid gap-4">
+            {classes.map((classItem) => (
+              <Card
+                key={classItem.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSelectClass(classItem.id)}
+              >
+                <CardHeader>
+                  <CardTitle>{classItem.title}</CardTitle>
+                  <CardDescription>
+                    Created on {new Date(classItem.created_at).toLocaleDateString()}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+            {!isLoading && classes.length === 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No classes yet. Create your first class to get started!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
