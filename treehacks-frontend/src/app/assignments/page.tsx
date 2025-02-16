@@ -13,7 +13,6 @@ interface Assignment {
   name: string;
   due_date: string;
   submissions?: number;
-  graded?: number;
 }
 
 export default function Assignments() {

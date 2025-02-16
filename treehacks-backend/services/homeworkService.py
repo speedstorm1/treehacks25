@@ -12,8 +12,8 @@ supabase: Client = create_client(url, key)
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 
-def publish_question_extracted_insight(homework_id: int):
-    response = supabase.table("homework_question").select("id").eq("homework_id", homework_id).execute()
+def publish_question_extracted_insight(assignment_id: int):
+    response = supabase.table("assignment_question").select("id").eq("assignment_id", assignment_id).execute()
     question_ids = response.data
 
     for value in question_ids:
@@ -37,7 +37,7 @@ def publish_question_extracted_insight(homework_id: int):
         
         For each misconception/error, provide:
         1. A clear description of the misconception that is under 8 words
-        2. An exact count of how many students had this misconception
+        2. An exact count of how many students had this misconception. There is one student for each Main Misunderstanding or Misconception and Key Areas for Improvement insight.
 
         Return the response in the following JSON format:
         {{"misconceptions": [
@@ -75,8 +75,8 @@ def publish_question_extracted_insight(homework_id: int):
     
     return "Question insights published successfully"
 
-def publish_homework_summary(homework_id: int):
-    questions_response = supabase.table("homework_question").select("id").eq("homework_id", homework_id).execute()
+def publish_homework_summary(assignment_id: int):
+    questions_response = supabase.table("assignment_question").select("id").eq("assignment_id", assignment_id).execute()
     question_ids = [q["id"] for q in questions_response.data]
     
     all_insights = []
@@ -114,19 +114,62 @@ def publish_homework_summary(homework_id: int):
     summary = response.choices[0].message.content
     
     try:
-        existing_insight = supabase.table("homework_insight").select("*").eq("homework_id", homework_id).execute()
+        existing_insight = supabase.table("assignment_insight").select("*").eq("assignment_id", assignment_id).execute()
             
         if existing_insight.data:
-            supabase.table("homework_insight").update({
+            supabase.table("assignment_insight").update({
                 "summary": summary,
-            }).eq("homework_id", homework_id).execute()
+            }).eq("assignment_id", assignment_id).execute()
             return "Homework summary updated successfully"
         else:
-            supabase.table("homework_insight").insert({
-                "homework_id": homework_id,
+            supabase.table("assignment_insight").insert({
+                "assignment_id": assignment_id,
                 "summary": summary,
             }).execute()
-            return "Homework summary published successfully"
+            return "Assignment summary published successfully"
     except Exception as e:
-        print(f"Error publishing homework summary: {str(e)}")
+        print(f"Error publishing assignment summary: {str(e)}")
         return f"Error: {str(e)}"
+
+if __name__ == "__main__":
+    assignment_id = 1
+    print("\n=== Testing publish_question_extracted_insight ===")
+    print(f"Getting questions for assignment {assignment_id}...")
+    
+    # Get questions to verify data
+    questions_response = supabase.table("assignment_question").select("*").eq("assignment_id", assignment_id).execute()
+    print(f"Found {len(questions_response.data)} questions:")
+    for q in questions_response.data:
+        print(f"- Question ID: {q['id']}")
+        
+        # Get answer insights for each question
+        insights = supabase.table("homework_answer_insight").select("*").eq("question_id", q['id']).execute()
+        print(f"  Found {len(insights.data)} answer insights")
+        for insight in insights.data:
+            print(f"  - {insight['summary']}")
+    
+    print("\nPublishing question extracted insights...")
+    result = publish_question_extracted_insight(assignment_id)
+    print("Result:", result)
+    
+    # Verify the extracted insights
+    print("\nVerifying extracted insights...")
+    for q in questions_response.data:
+        extracted = supabase.table("homework_question_extracted_insight").select("*").eq("question_id", q['id']).execute()
+        print(f"\nQuestion {q['id']} extracted insights:")
+        for e in extracted.data:
+            print(f"- {e['error_summary']}: {e['error_count']} occurrences")
+    
+    print("\n=== Testing publish_homework_summary ===")
+    print(f"Publishing homework summary for assignment {assignment_id}...")
+    result = publish_homework_summary(assignment_id)
+    print("Result:", result)
+    
+    # Verify the homework summary
+    print("\nVerifying homework summary...")
+    summary = supabase.table("assignment_insight").select("*").eq("assignment_id", assignment_id).execute()
+    if summary.data:
+        print("\nHomework Summary:")
+        print(summary.data[0]['summary'])
+    else:
+        print("No summary found")
