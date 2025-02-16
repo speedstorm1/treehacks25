@@ -109,7 +109,7 @@ def publish_session_summary(short_id: int):
     1. A high-level summary of the main conceptual issues across all questions
     2. Identify any patterns or related misconceptions across different questions
     
-    Format your response in a clear, simple, very concise way in Markdown that would be helpful for an instructor. Don't leave any additional comments.
+    Format your response in a clear, simple, very concise way that would be helpful for an instructor. Don't leave any additional comments.
     """
     
     response = openai_client.chat.completions.create(

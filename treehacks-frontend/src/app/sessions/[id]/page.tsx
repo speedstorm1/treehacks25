@@ -335,9 +335,21 @@ export default function SessionInsights() {
                 <CardContent className="p-8 pt-0">
                   <div className="space-y-4">
                     {session.summary ? (
-                      <ReactMarkdown className="text-lg space-y-4">
-                        {session.summary}
-                      </ReactMarkdown>
+                      <div className="prose prose-slate max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-4" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-3" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-md font-bold mb-2" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />,
+                            li: ({node, ...props}) => <li className="text-gray-700" {...props} />,
+                            p: ({node, ...props}) => <p className="mb-4 text-gray-700" {...props} />,
+                            strong: ({node, ...props}) => <span className="font-semibold" {...props} />
+                          }}
+                        >
+                          {session.summary}
+                        </ReactMarkdown>
+                      </div>
                     ) : (
                       <p className="text-lg text-gray-500 italic">
                         Summary will be available once the session is closed and analyzed.
