@@ -20,9 +20,7 @@ export function CloseSessionButton({ sessionId, onClose }: Props) {
     setIsClosing(true)
 
     try {
-      const sessionResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/run-nlp`, {
-        method: 'POST',
-      });
+      const sessionResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}`);
   
       if (!sessionResponse.ok) throw new Error('Failed to run NLP processing');
       const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}/close`, {

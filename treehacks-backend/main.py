@@ -128,7 +128,7 @@ async def get_progress(short_id: str):
         # Get the first question's ID
         question_result = (supabase.table('session_questions')
             .select('id')
-            .eq('question_number', 1)
+            .eq('question_number', 0)
             .eq('session_id', session_id)
             .execute())
         
@@ -450,26 +450,15 @@ async def get_topics(class_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/topics/{topic_id}")
+@app.put("/api/topic/{topic_id}")
 async def modify_topic(topic_id: str, topic: TopicUpdate):
     try:
-        # First verify the topic exists
-        existing = supabase.table('topic').select('*').eq('id', topic_id).execute()
-        if not existing or not existing.data:
-            raise HTTPException(status_code=404, detail="Topic not found")
-            
-        # Update the topic
-        response = supabase.table('topic').update({
-            'title': topic.title,
-            'description': topic.description
+        result = supabase.table('topic').update({
+            'title': topic.title
         }).eq('id', topic_id).execute()
-        
-        if not response or not response.data:
-            raise HTTPException(status_code=500, detail="Failed to update topic")
-            
-        return response.data[0]
+        return result.data[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/topics")
 async def add_topic(topic: TopicUpdate, class_id: str):
@@ -487,23 +476,14 @@ async def add_topic(topic: TopicUpdate, class_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/api/topics/{topic_id}")
+@app.post("/api/topic/delete/{topic_id}")
 async def delete_topic(topic_id: str):
-    try:
-        # First verify the topic exists
-        existing = supabase.table('topic').select('*').eq('id', topic_id).execute()
-        if not existing or not existing.data:
-            raise HTTPException(status_code=404, detail="Topic not found")
-            
-        # Delete the topic
-        response = supabase.table('topic').delete().eq('id', topic_id).execute()
-        
-        if not response:
-            raise HTTPException(status_code=500, detail="Failed to delete topic")
-            
-        return {"message": "Topic deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    result = supabase.table('topic').delete().eq('id', topic_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    
+    return result.data[0]
 
 @app.post("/api/topic/generate")
 async def generate_topic(syllabus: Syllabus):
