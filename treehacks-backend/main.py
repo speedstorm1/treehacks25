@@ -176,18 +176,21 @@ async def get_questions(short_id: str):
     return result.data
 
 # student response to a session's questions
-@app.post("/api/sessions/responses")
+@app.post("/api/sessions/responses/batch")
 async def post_response(response_data: ResponseCreate):
     # Convert to uppercase to make it case-insensitive
-    question_id = response_data.question_id.upper()
-    response_text = response_data.response_text
+    try:
+        results = []
+        for response in response_data.responses:
+            result = supabase.table('session_responses').insert({
+                'question_id': response.question_id,
+                'response_text': response.response_text
+            }).execute()
+            results.append(result.data[0])
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
-    result = supabase.table('session_responses').insert({
-        'question_id': question_id,
-        'response_text': response_text
-    }).execute()
-    
-    return result.data
+    return results
 
 #create a lecture given data
 @app.post("/api/lectures")

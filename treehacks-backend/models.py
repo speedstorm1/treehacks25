@@ -72,9 +72,12 @@ class LectureCreate(BaseModel):
     lecture_video: str | None = None
     class_id: str
 
-class ResponseCreate(BaseModel):
+class ResponseItem(BaseModel):
     question_id: str
     response_text: str
+
+class ResponseCreate(BaseModel):
+    responses: list[ResponseItem]
 
 class Syllabus(BaseModel):
     syllabus_url: str
