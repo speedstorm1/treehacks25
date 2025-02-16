@@ -13,14 +13,11 @@ from video_utils import extract_audio
 from speech_to_text import transcribe_with_timestamps
 from slide_utils import map_slides_to_video
 from question_gen import generate_questions, save_questions
-<<<<<<< HEAD
 from topic_utils import get_all_topics, get_topic_by_id
-=======
 from llm_utils import extract_topics_from_syllabus
 import requests
 import io
 from PyPDF2 import PdfReader
->>>>>>> cq-creating-topics
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
