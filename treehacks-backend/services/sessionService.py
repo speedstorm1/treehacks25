@@ -15,7 +15,7 @@ openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 def publish_session_question_extracted_insight(short_id: int):
     result = supabase.table("sessions").select("id").eq("short_id", short_id).execute()
     session_id = result.data[0]["id"]
-    response = supabase.table("session_question").select("id").eq("session_id", session_id).execute()
+    response = supabase.table("session_questions").select("id").eq("session_id", session_id).execute()
     question_ids = response.data
 
     for value in question_ids:
