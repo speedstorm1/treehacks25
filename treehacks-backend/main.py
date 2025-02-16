@@ -756,3 +756,16 @@ async def get_session_question_insights(question_id: str):
         return result.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/session_questions/{question_id}/response_count")
+async def get_question_response_count(question_id: str):
+    """Get the total number of responses for a specific question"""
+    try:
+        result = supabase.table("session_responses").select(
+            "id", 
+            count="exact"
+        ).eq("question_id", question_id).execute()
+        
+        return {"total_responses": result.count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

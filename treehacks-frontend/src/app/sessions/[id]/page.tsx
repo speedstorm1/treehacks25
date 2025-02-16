@@ -131,8 +131,18 @@ export default function SessionInsights() {
                 }))
                 correct = insights.find((insight: any) => insight.error_summary === 'Correct')?.error_count || 0
                 total = insights.find((insight: any) => insight.error_summary === 'Total')?.error_count || 0
+                question.correct_submission = correct
                 // remove correct and total from insights
                 responses = responses.filter((insight: any) => insight.name !== 'Correct' && insight.name !== 'Total')
+              }
+
+              // Get total submissions
+              const countResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/response_count`)
+              if (countResponse.ok) {
+                const countData = await countResponse.json()
+                question.total_submission = countData.total_responses
+              } else {
+                question.total_submission = 0
               }
               
               // Fetch topics
@@ -252,6 +262,15 @@ export default function SessionInsights() {
                 responses = responses.filter((insight: any) => 
                   insight.name !== 'Correct' && insight.name !== 'Total'
                 )
+              }
+              
+              // Get total submissions
+              const countResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/response_count`)
+              if (countResponse.ok) {
+                const countData = await countResponse.json()
+                question.total_submission = countData.total_responses
+              } else {
+                question.total_submission = 0
               }
               
               // Fetch topics
