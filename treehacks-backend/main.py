@@ -504,37 +504,33 @@ async def delete_topic(topic_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/syllabus/upload")
-async def upload_syllabus(file: UploadFile = File(...)):
+@app.post("/api/topic/generate")
+async def generate_topic(syllabus: Syllabus):
     try:
-        # Read the file content
-        content = await file.read()
-        
-        # Verify it's a PDF
-        if not file.filename.lower().endswith('.pdf'):
+        # Download the PDF content directly from Supabase URL
+        response = requests.get(syllabus.syllabus_url)
+        if not response.ok:
             raise HTTPException(
                 status_code=400,
-                detail="Only PDF files are supported"
+                detail=f"Failed to fetch syllabus: {response.status_code}"
             )
             
-        # Upload to Supabase storage
-        file_path = f"syllabi/{file.filename}"
-        result = supabase.storage.from_('syllabi').upload(
-            path=file_path,
-            file=content,
-            file_options={"content-type": "application/pdf"}
-        )
+        pdf_content = response.content
+        text_content = extract_text_from_pdf(pdf_content)
+
+        # Extract topics using OpenAI
+        topics = extract_topics_from_syllabus(text_content)
         
-        # Get the public URL
-        url = supabase.storage.from_('syllabi').get_public_url(file_path)
-        
-        return {"url": url}
+        # Insert topics into the database
+        for topic in topics:
+            supabase.table('topic').insert({
+                'title': topic,
+                'class_id': syllabus.class_id
+            }).execute()
+            
+        return {"message": "Topics generated successfully", "topics": topics}
     except Exception as e:
-        print(f"Error uploading syllabus: {str(e)}")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to upload syllabus: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/assignment", response_model=AssignmentResponse)
 async def create_assignment(assignment: AssignmentCreate):
