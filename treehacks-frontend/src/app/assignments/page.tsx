@@ -19,6 +19,29 @@ export default function Assignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [processingNLP, setProcessingNLP] = useState<string | null>(null)
+
+  const handleRunNLP = async (assignmentId: string) => {
+    try {
+      setProcessingNLP(assignmentId);
+      const response = await fetch(`http://localhost:8000/assignment/${assignmentId}/run-nlp`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) throw new Error('Failed to run NLP processing');
+      
+      // Refresh the assignments list
+      const updatedResponse = await fetch('http://localhost:8000/assignment');
+      if (!updatedResponse.ok) throw new Error('Failed to fetch homework');
+      const updatedData = await updatedResponse.json();
+      setAssignments(updatedData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setProcessingNLP(null);
+    }
+  };
+
   useEffect(() => {
     async function fetchAssignments() {
       try {
@@ -68,7 +91,7 @@ export default function Assignments() {
                     <TableHead className="w-[300px] text-base">Name</TableHead>
                     <TableHead className="text-base">Deadline</TableHead>
                     <TableHead className="text-right text-base">Submissions</TableHead>
-                    <TableHead className="text-right text-base">Graded</TableHead>
+                    <TableHead className="text-right text-base">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -80,6 +103,19 @@ export default function Assignments() {
                         </Link>
                       </TableCell>
                       <TableCell className="text-lg">{assignment.due_date}</TableCell>
+                      <TableCell className="text-right">
+                        {/* Add graded count here if available */}
+                        0
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="secondary"
+                          onClick={() => handleRunNLP(assignment.id)}
+                          disabled={processingNLP === assignment.id}
+                        >
+                          {processingNLP === assignment.id ? 'Processing...' : 'Get Insights'}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

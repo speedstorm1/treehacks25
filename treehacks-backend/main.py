@@ -14,6 +14,7 @@ from speech_to_text import transcribe_with_timestamps
 from slide_utils import map_slides_to_video
 from question_gen import generate_questions, save_questions
 from topic_utils import get_all_topics, get_topic_by_id
+from services.homeworkService import publish_question_extracted_insight, publish_homework_summary
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -383,4 +384,19 @@ async def get_question_insights(assignment_id: int):
         return {"insights": insights}
     except Exception as e:
         print(f"Error in get_question_insights: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/assignment/{assignment_id}/run-nlp")
+async def run_homework_nlp(assignment_id: int):
+    try:
+        insight_result = publish_question_extracted_insight(assignment_id)
+        summary_result = publish_homework_summary(assignment_id)
+        
+        return {
+            "message": "NLP processing completed successfully",
+            "insight_result": insight_result,
+            "summary_result": summary_result
+        }
+    except Exception as e:
+        print(f"Error in run_homework_nlp: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
