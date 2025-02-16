@@ -36,20 +36,27 @@ async def grade_session(short_id: str):
             result = supabase.table("session_responses").select("response_text").eq("question_id", question_id).execute()
             answers = [answer["response_text"] for answer in result.data]
 
-            temp_result = supabase.table("session_questions").select("id", "question_text", "total_submission", "correct_submission").eq("session_id", session_id).eq("question_number", i).execute()
+            total_submissions = 0
+            correct_submissions = 0
 
             # for each student answer:
             for answer in answers:
                 # call questionGradingService to grade it given the problem statement and the student's answer
                 grade = await grade_student_answer(question_id, question_text, answer)
-                # add 1 to the "total_submission" column of the session_questions table for this question_id
-                supabase.table("session_questions").update({"total_submission": temp_result.data[0].get("total_submission") + 1}).eq("id", question_id).execute()
+                total_submissions += 1
+                
                 # if incorrect, call add_session_answer_insight
                 if grade == "0":
                     add_session_answer_insight(question_id, question_text, answer)
-                # if correct, add 1 to the "correct_submission" column of the session_questions table for this question_id
+                # if correct, increment correct submissions
                 if grade == "1":
-                    supabase.table("session_questions").update({"correct_submission": temp_result.data[0].get("correct_submission") + 1}).eq("id", question_id).execute()
+                    correct_submissions += 1
+            
+            # Update the counts after processing all answers
+            supabase.table("session_questions").update({
+                "total_submission": total_submissions,
+                "correct_submission": correct_submissions
+            }).eq("id", question_id).execute()
     
     except Exception as e:
         raise Exception(f"Error processing session: {str(e)}")

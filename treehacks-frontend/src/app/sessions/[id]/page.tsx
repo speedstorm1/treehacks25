@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from "next/navigation"
-import { CustomPieChart } from "@/components/pie-chart"
+import { CustomPieChart, COLORS } from "@/components/pie-chart"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useEffect, useState } from "react"
@@ -9,6 +9,7 @@ import { CloseSessionButton } from "@/components/close-session-button"
 import { createClient } from '@supabase/supabase-js'
 import { useClass } from "@/app/context/ClassContext"
 import ReactMarkdown from 'react-markdown'
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -55,7 +56,8 @@ const formatDate = (dateString: string) => {
     year: 'numeric',
     hour: 'numeric',
     minute: 'numeric',
-    hour12: true
+    hour12: true,
+    timeZone: 'America/Los_Angeles'
   }).format(date)
 }
 
@@ -139,6 +141,10 @@ export default function SessionInsights() {
             let topics = []
             if (topicsResponse.ok) {
               topics = await topicsResponse.json()
+            }
+
+            if (question.total_submission) {
+              setResponseCount(question.total_submission)
             }
             
             return {
@@ -308,7 +314,7 @@ export default function SessionInsights() {
                 <CardContent className="p-8 pt-0">
                   <div className="space-y-4">
                     <p className="text-lg"><strong>Session ID:</strong> {session.short_id}</p>
-                    <p className="text-lg"><strong>Created:</strong> {formatDate(session.created_at)}</p>
+                    <p className="text-lg" suppressHydrationWarning><strong>Created:</strong> {formatDate(session.created_at)}</p>
                     <p className="text-lg">
                       <strong>Status:</strong> 
                       <span className="ml-2 inline-block px-2 py-1 rounded bg-gray-100 text-gray-800">
@@ -341,35 +347,71 @@ export default function SessionInsights() {
                 </CardContent>
               </Card>
 
-              {session.questions?.map((question) => (
-                <Card key={question.id}>
-                  <CardHeader className="p-8">
-                    <div className="space-y-4">
-                      {question.topics && question.topics.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {question.topics.map((topic) => (
-                            <span
-                              key={topic.id}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
-                            >
-                              {topic.title}
-                            </span>
-                          ))}
+              {session.questions?.map((question) => {
+                const correctRate = question.correct_submission / (question.total_submission || 1)
+                const isUrgent = correctRate < 0.5 && question.total_submission > 0
+
+                return (
+                  <Card key={question.id} className={isUrgent ? "border-red-400" : ""}>
+                    <CardHeader className="p-8">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-3">
+                          {question.topics && question.topics.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {question.topics.map((topic) => (
+                                <span
+                                  key={topic.id}
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                                >
+                                  {topic.title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div>
+                            <CardTitle className="text-xl flex items-center gap-2">
+                              Question {question.question_number}
+                              {isUrgent && (
+                                <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                              )}
+                            </CardTitle>
+                            <CardDescription className="mt-2 text-gray-600">
+                              {question.text}
+                            </CardDescription>
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <CardTitle className="text-2xl">{question.text}</CardTitle>
-                        <CardDescription className="text-base">Response distribution</CardDescription>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">
+                            {question.correct_submission} / {question.total_submission}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            correct
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 pt-0">
-                    <div className="h-[300px]">
-                      <CustomPieChart data={question.responses} />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent className="p-8 pt-0">
+                      <div className="h-[300px]">
+                        <CustomPieChart data={question.responses} />
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {question.responses.map((response, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <div className="flex items-center">
+                              <div 
+                                className="w-3 h-3 rounded-full mr-2" 
+                                style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              />
+                              <span className="text-gray-600">{response.name}</span>
+                            </div>
+                            <span className="text-gray-600">{response.value} occurrences</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </>
           )}
         </div>
