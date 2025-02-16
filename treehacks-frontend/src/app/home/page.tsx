@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useClass } from "../context/ClassContext"
 
 interface Topic {
   id: string
@@ -31,14 +32,16 @@ export default function Home() {
   const [newTopicTitle, setNewTopicTitle] = useState("")
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const { classId } = useClass()
 
   useEffect(() => {
+    console.log("Current classId:", classId) // Debug log
     fetchTopics()
-  }, [])
+  }, [classId])
 
   const fetchTopics = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/topics')
+      const response = await fetch(`http://localhost:8000/api/topics?class_id=${classId}`)
       if (!response.ok) throw new Error('Failed to fetch topics')
       const data = await response.json()
       setTopics(data)
@@ -53,10 +56,13 @@ export default function Home() {
     if (!newTopicTitle.trim()) return
 
     try {
-      const response = await fetch('http://localhost:8000/api/topic/add', {
+      const response = await fetch('http://localhost:8000/api/topic/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTopicTitle.trim() })
+        body: JSON.stringify({ 
+          title: newTopicTitle.trim(),
+          class_id: classId 
+        })
       })
 
       if (!response.ok) throw new Error('Failed to add topic')
@@ -73,10 +79,13 @@ export default function Home() {
     if (!editingTopic || !editingTopic.title.trim()) return
 
     try {
-      const response = await fetch(`http://localhost:8000/api/topic/modify/${editingTopic.id}`, {
-        method: 'PATCH',
+      const response = await fetch(`http://localhost:8000/api/topic/${editingTopic.id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editingTopic.title.trim() })
+        body: JSON.stringify({ 
+          title: editingTopic.title.trim(),
+          class_id: classId
+        })
       })
 
       if (!response.ok) throw new Error('Failed to update topic')
@@ -108,12 +117,9 @@ export default function Home() {
   const uploadSyllabus = async (file: File) => {
     if (!file) return
 
-    const formData = new FormData()
-    formData.append('file', file)
-
     console.log("Uploading file:", file)
 
-    return "https://drive.google.com/file/d/1_MsuLmYnfmwKFydFc9usab1mIk1AOQsK/view?usp=sharing"; //hard coded for now since can't upload to supabase free
+    return "https://drive.google.com/file/d/1_MsuLmYnfmwKFydFc9usab1mIk1AOQsK/view?usp=sharing"; // Using hardcoded Google Drive link
   }
 
   const handleSyllabusUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,24 +128,28 @@ export default function Home() {
 
     setIsLoading(true)
 
-    const syllabus_url = await uploadSyllabus(file)
-    if (syllabus_url) {
-      try {
+    try {
+      const syllabus_url = await uploadSyllabus(file)
+      if (syllabus_url) {
         const response = await fetch('http://localhost:8000/api/topic/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ syllabus_url })
+          body: JSON.stringify({ syllabus_url, class_id: classId })
         })
 
-        if (!response.ok) throw new Error('Failed to generate topics')
+        if (!response.ok) {
+          const error = await response.text()
+          throw new Error(error)
+        }
         
         fetchTopics() // Refresh topics after generation
-      } catch (error) {
-        console.error('Error generating topics:', error)
       }
+    } catch (error) {
+      console.error('Error generating topics:', error)
+      alert('Error: ' + error)
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   const filteredTopics = topics.filter((topic) => 

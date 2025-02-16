@@ -333,24 +333,23 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
 
 @app.get("/api/topics")
 async def get_topics(class_id: str):
-    result = supabase.table('topics').select('*').eq('class_id', class_id).execute()
+    result = supabase.table('topic').select('*').eq('class_id', class_id).execute()
     return result.data
 
-@app.put("/api/topics/{topic_id}")
+@app.put("/api/topic/{topic_id}")
 async def modify_topic(topic_id: str, topic: TopicUpdate):
     try:
-        result = supabase.table('topics').update({
-            'title': topic.title,
-            'class_id': topic.class_id
+        result = supabase.table('topic').update({
+            'title': topic.title
         }).eq('id', topic_id).execute()
         return result.data[0]
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/topics")
+@app.post("/api/topic")
 async def add_topic(topic: TopicUpdate):
     try:
-        result = supabase.table('topics').insert({
+        result = supabase.table('topic').insert({
             'title': topic.title,
             'class_id': topic.class_id
         }).execute()
@@ -361,17 +360,42 @@ async def add_topic(topic: TopicUpdate):
 @app.post("/api/topic/generate")
 async def generate_topic(syllabus: Syllabus):
     try:
-        # Download and extract text from the syllabus PDF
-        response = requests.get(syllabus.syllabus_url)
+        # Extract the file ID from the Google Drive URL
+        file_id = None
+        if "drive.google.com" in syllabus.syllabus_url:
+            if "/file/d/" in syllabus.syllabus_url:
+                file_id = syllabus.syllabus_url.split("/file/d/")[1].split("/")[0]
+            elif "id=" in syllabus.syllabus_url:
+                file_id = syllabus.syllabus_url.split("id=")[1].split("&")[0]
+        
+        if not file_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid Google Drive URL. Please provide a valid sharing URL."
+            )
+            
+        # Get the direct download URL
+        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        
+        # Download the PDF content
+        response = requests.get(download_url)
+        if not response.ok:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to fetch syllabus: {response.status_code}"
+            )
+            
         pdf_content = response.content
         text_content = extract_text_from_pdf(pdf_content)
+        # print(f"Extracted text content ({len(text_content)} chars)")
+        # print("First 500 chars:", text_content[:500])
 
         # Extract topics using OpenAI
         topics = extract_topics_from_syllabus(text_content)
         
         # Insert topics into the database
         for topic in topics:
-            supabase.table('topics').insert({
+            supabase.table('topic').insert({
                 'title': topic,
                 'class_id': syllabus.class_id
             }).execute()
@@ -389,6 +413,38 @@ async def delete_topic(topic_id: str):
     
     return result.data[0]
 
+@app.post("/api/syllabus/upload")
+async def upload_syllabus(file: UploadFile = File(...)):
+    try:
+        # Read the file content
+        content = await file.read()
+        
+        # Verify it's a PDF
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=400,
+                detail="Only PDF files are supported"
+            )
+            
+        # Upload to Supabase storage
+        file_path = f"syllabi/{file.filename}"
+        result = supabase.storage.from_('syllabi').upload(
+            path=file_path,
+            file=content,
+            file_options={"content-type": "application/pdf"}
+        )
+        
+        # Get the public URL
+        url = supabase.storage.from_('syllabi').get_public_url(file_path)
+        
+        return {"url": url}
+    except Exception as e:
+        print(f"Error uploading syllabus: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to upload syllabus: {str(e)}"
+        )
+
 def extract_text_from_pdf(pdf_content: bytes) -> str:
     """
     Extract text content from PDF bytes.
@@ -396,22 +452,39 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
     try:
         # Create PDF reader object
         pdf_file = io.BytesIO(pdf_content)
-        pdf_reader = PdfReader(pdf_file)
+        try:
+            pdf_reader = PdfReader(pdf_file)
+        except Exception as e:
+            print(f"Error creating PDF reader: {str(e)}")
+            raise ValueError("Invalid PDF format") from e
+            
+        if len(pdf_reader.pages) == 0:
+            raise ValueError("PDF has no pages")
         
         # Extract text from all pages
         text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
+        for i, page in enumerate(pdf_reader.pages):
+            try:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+                print(f"Extracted page {i+1}/{len(pdf_reader.pages)}")
+            except Exception as e:
+                print(f"Error extracting text from page {i+1}: {str(e)}")
+                continue
             
         # Clean up the text
         text = text.strip()
-        # Remove multiple newlines
+        if not text:
+            raise ValueError("No text content found in PDF")
+            
+        # Remove multiple newlines and clean up whitespace
         text = "\n".join(line.strip() for line in text.split("\n") if line.strip())
         
         return text
     except Exception as e:
         print(f"Error extracting text from PDF: {str(e)}")
-        raise ValueError("Failed to extract text from PDF") from e
+        raise ValueError(f"Failed to extract text from PDF: {str(e)}") from e
 
 #get all questions for a session given the session id
 @app.get("/api/sessions/questions/{short_id}")
