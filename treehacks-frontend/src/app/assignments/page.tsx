@@ -210,8 +210,7 @@ export default function Assignments() {
                       </TableCell>
                       <TableCell className="text-lg px-4 py-2">{assignment.due_date}</TableCell>
                       <TableCell className="text-right px-4 py-2">
-                        {/* Add graded count here if available */}
-                        0
+                        {assignment.submissions}
                       </TableCell>
                       <TableCell className="text-right px-4 py-2">
                         <Button 
