@@ -21,15 +21,17 @@ interface Class {
   title: string
   created_at: string
   syllabus: string | null
+  code: string | null
 }
 
 export default function Home() {
   const router = useRouter()
-  const { setClassId } = useClass()
+  const { setClass} = useClass()
   const [classes, setClasses] = useState<Class[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newClassName, setNewClassName] = useState("")
+  const [newClassCode, setNewClassCode] = useState("")
 
   useEffect(() => {
     fetchClasses()
@@ -47,26 +49,32 @@ export default function Home() {
   }
 
   const handleAddClass = async () => {
-    if (!newClassName.trim()) return
+    if (!newClassName.trim() || !newClassCode.trim()) return
 
     try {
       const { data, error } = await supabase
         .from("class")
-        .insert([{ title: newClassName.trim() }])
+        .insert([{ 
+          title: newClassName.trim(),
+          class_code: newClassCode.trim()
+        }])
         .select()
 
       if (error) throw error
 
       setClasses([...(data || []), ...classes])
       setNewClassName("")
+      setNewClassCode("")
       setIsDialogOpen(false)
     } catch (error) {
       console.error("Error adding class:", error)
     }
   }
 
-  const handleSelectClass = (classId: string) => {
-    setClassId(classId)
+  const handleSelectClass = async (classId: string) => {
+    const result = await supabase.from('class').select('*').eq('id', classId)
+    const classCode = await result.data[0]['class_code']
+    setClass(classId, classCode)
     router.push("/home")
   }
 
@@ -107,11 +115,20 @@ export default function Home() {
                       placeholder="Enter class name"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Class Code</Label>
+                    <Input
+                      id="code"
+                      value={newClassCode}
+                      onChange={(e) => setNewClassCode(e.target.value)}
+                      placeholder="Enter class code"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
                     onClick={handleAddClass}
-                    disabled={!newClassName.trim()}
+                    disabled={!(newClassName.trim() && newClassCode.trim())}
                   >
                     Create Class
                   </Button>

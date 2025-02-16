@@ -38,10 +38,11 @@ export default function Home() {
   const [newTopicTitle, setNewTopicTitle] = useState("")
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
 
   useEffect(() => {
     console.log("Current classId:", classId) // Debug log
+    console.log("Current classCode:", classCode) // Debug log
     fetchTopics()
   }, [classId])
 
@@ -221,7 +222,11 @@ export default function Home() {
   return (
     <div className="min-h-full p-8">
       <div className="max-w-[2000px] mx-auto space-y-8">
-        <Breadcrumb items={[{ label: "Home", href: "/" }]} />
+        <Breadcrumb
+          items={[
+            { label: classCode || "Home", href: "/home" }
+          ]}
+        />
 
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">Dashboard</h1>
@@ -274,7 +279,13 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          <Card>
+          <Card 
+            className="transition-all duration-200"
+            style={{
+              borderColor: getColorForMastery(overallProgress),
+              borderWidth: '2px'
+            }}
+          >
             <CardHeader className="p-8">
               <CardTitle className="text-2xl">Overall Class Progress</CardTitle>
               <CardDescription className="text-base">Mastery across all topics</CardDescription>
@@ -283,7 +294,11 @@ export default function Home() {
               <div className="w-full">
                 <ProgressBar 
                   value={overallProgress} 
-                  label={`Overall Mastery: ${overallProgress}%`} 
+                  label={
+                    <span style={{ color: getColorForMastery(overallProgress) }}>
+                      {`${overallProgress}%`}
+                    </span>
+                  }
                   color={getColorForMastery(overallProgress)} 
                 />
               </div>
@@ -329,35 +344,55 @@ export default function Home() {
                     filteredTopics
                       .sort((a, b) => (b.mastery_level || 0) - (a.mastery_level || 0))
                       .map((topic) => (
-                        <div key={topic.id} href={`/topics/${topic.id}`} className="p-8 rounded-lg border bg-card">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="text-xl font-medium">{topic.title}</div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setEditingTopic(topic)
-                                  setIsDialogOpen(true)
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteTopic(topic.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                        <Link 
+                          key={topic.id}
+                          href={`/topics/${topic.id}`}
+                          className="block transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+                        >
+                          <div 
+                            className="p-8 rounded-lg border bg-card transition-all duration-200"
+                            style={{
+                              borderColor: getColorForMastery(topic.mastery_level || 0),
+                              borderWidth: '2px'
+                            }}
+                          >
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="text-xl font-medium">{topic.title}</div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setEditingTopic(topic)
+                                    setIsDialogOpen(true)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleDeleteTopic(topic.id)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
+                            <ProgressBar 
+                              value={topic.mastery_level || 0} 
+                              label={
+                                <span style={{ color: getColorForMastery(topic.mastery_level || 0) }}>
+                                  {`${topic.mastery_level || 0}% Mastery`}
+                                </span>
+                              } 
+                              color={getColorForMastery(topic.mastery_level || 0)} 
+                            />
                           </div>
-                          <ProgressBar 
-                            value={topic.mastery_level || 0} 
-                            label={`${topic.mastery_level || 0}% Mastery`} 
-                            color={getColorForMastery(topic.mastery_level || 0)} 
-                          />
-                        </div>
+                        </Link>
                       ))
                   )}
                 </div>

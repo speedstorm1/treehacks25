@@ -20,7 +20,7 @@ export default function AddSession() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
   
   const lectureId = params?.id as string
   const timestamp = searchParams.get('timestamp') || '0'
@@ -100,7 +100,7 @@ export default function AddSession() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             { label: lecture.name, href: `/lectures/${lecture.id}` },
             { label: "Add Learning Check", href: `/lectures/${lecture.id}/add-session?timestamp=${timestamp}` },

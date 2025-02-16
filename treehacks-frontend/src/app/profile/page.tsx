@@ -7,9 +7,11 @@ import { Breadcrumb } from "@/components/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useClass } from "@/app/context/ClassContext"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function Profile() {
+  const { classCode } = useClass()
   const [name, setName] = useState("John Doe")
   const [email, setEmail] = useState("john.doe@example.com")
 
@@ -24,7 +26,7 @@ export default function Profile() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Profile", href: "/profile" },
           ]}
         />

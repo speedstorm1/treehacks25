@@ -5,6 +5,8 @@ import { CustomPieChart } from "@/components/pie-chart"
 import { LineGraph } from "@/components/line-graph"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { useClass } from "@/app/context/ClassContext"
 
 // This data would typically come from your backend based on the topic ID
 const topicsData = {
@@ -34,10 +36,26 @@ const topicsData = {
 export default function TopicMastery() {
   const params = useParams()
   const topicId = params.id as string
-  const topicData = topicsData[topicId]
+  const [topicData, setTopicData] = useState<any>(null)
+  const { classId, classCode } = useClass()
+
+  useEffect(() => {
+    fetchTopicData()
+  }, [topicId])
+
+  const fetchTopicData = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/topic/${topicId}`)
+      if (!response.ok) throw new Error('Failed to fetch topic')
+      const data = await response.json()
+      setTopicData(data)
+    } catch (error) {
+      console.error('Error fetching topic:', error)
+    }
+  }
 
   if (!topicData) {
-    return <div>Topic not found</div>
+    return <div>Loading...</div>
   }
 
   const pieData = [
@@ -50,17 +68,18 @@ export default function TopicMastery() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
-            { label: topicData.name, href: `/topics/${topicId}` },
+            { label: classCode || "Home", href: "/home" },
+            { label: "Topics", href: "/home" },
+            { label: topicData.title, href: `/topics/${topicId}` },
           ]}
         />
 
-        <h1 className="text-3xl font-bold">{topicData.name}</h1>
+        <h1 className="text-3xl font-bold">{topicData.title}</h1>
 
         <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader className="p-8">
-              <CardTitle className="text-2xl">{topicData.name} Mastery</CardTitle>
+              <CardTitle className="text-2xl">{topicData.title} Mastery</CardTitle>
               <CardDescription className="text-base">Current mastery level for this topic</CardDescription>
             </CardHeader>
             <CardContent className="p-8 pt-0">
