@@ -110,56 +110,52 @@ export default function SessionInsights() {
             const insight = await insightResponse.json()
             data.summary = insight.summary
           }
-        }
 
-        // Fetch questions and their insights
-        const questionsResponse = await fetch(`http://localhost:8000/api/sessions/questions/${sessionId}`)
-        if (questionsResponse.ok) {
-          const questionsData = await questionsResponse.json()
-          
-          // For each question, fetch its insights and topics
-          const questionsWithInsights = await Promise.all(questionsData.map(async (question: any) => {
-            // Fetch insights
-            const insightResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/insights`)
-            let responses = []
-            let correct = -1
-            let total = -1
-            if (insightResponse.ok) {
-              const insights = await insightResponse.json()
-              responses = insights.map((insight: any) => ({
-                name: insight.error_summary,
-                value: insight.error_count
-              }))
-              correct = insights.find((insight: any) => insight.error_summary === 'Correct')?.error_count || 0
-              total = insights.find((insight: any) => insight.error_summary === 'Total')?.error_count || 0
-              // remove correct and total from insights
-              responses = responses.filter((insight: any) => insight.name !== 'Correct' && insight.name !== 'Total')
-            }
+          // Fetch questions and their insights
+          const questionsResponse = await fetch(`http://localhost:8000/api/sessions/questions/${sessionId}`)
+          if (questionsResponse.ok) {
+            const questionsData = await questionsResponse.json()
             
-            // Fetch topics
-            const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
-            let topics = []
-            if (topicsResponse.ok) {
-              topics = await topicsResponse.json()
-            }
-
-            if (question.total_submission) {
-              setResponseCount(question.total_submission)
-            }
+            // For each question, fetch its insights and topics
+            const questionsWithInsights = await Promise.all(questionsData.map(async (question: any) => {
+              // Fetch insights
+              const insightResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/insights`)
+              let responses = []
+              let correct = -1
+              let total = -1
+              if (insightResponse.ok) {
+                const insights = await insightResponse.json()
+                responses = insights.map((insight: any) => ({
+                  name: insight.error_summary,
+                  value: insight.error_count
+                }))
+                correct = insights.find((insight: any) => insight.error_summary === 'Correct')?.error_count || 0
+                total = insights.find((insight: any) => insight.error_summary === 'Total')?.error_count || 0
+                // remove correct and total from insights
+                responses = responses.filter((insight: any) => insight.name !== 'Correct' && insight.name !== 'Total')
+              }
+              
+              // Fetch topics
+              const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
+              let topics = []
+              if (topicsResponse.ok) {
+                topics = await topicsResponse.json()
+              }
+              
+              return {
+                id: question.id,
+                text: question.question_text,
+                question_text: question.question_text,
+                question_number: question.question_number,
+                total_submission: question.total_submission || 0,
+                correct_submission: question.correct_submission || 0,
+                responses,
+                topics
+              }
+            }))
             
-            return {
-              id: question.id,
-              text: question.question_text,
-              question_text: question.question_text,
-              question_number: question.question_number,
-              total_submission: question.total_submission || 0,
-              correct_submission: question.correct_submission || 0,
-              responses,
-              topics
-            }
-          }))
-          
-          data.questions = questionsWithInsights.sort((a, b) => a.question_number - b.question_number)
+            data.questions = questionsWithInsights.sort((a, b) => a.question_number - b.question_number)
+          }
         }
         
         setSession(data)
@@ -209,25 +205,107 @@ export default function SessionInsights() {
 
   // Handle session end
   const handleSessionEnd = async () => {
-    setAnalyzing(true)
-    // Keep the analyzing state for 3 seconds before refreshing
-    setTimeout(async () => {
-      try {
-        // Fetch updated session data
-        const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}`)
-        if (response.ok) {
+    try {
+      setAnalyzing(true)
+      // Create a function to fetch updated data
+      const fetchUpdatedData = async () => {
+        try {
+          const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}`)
+          if (!response.ok) {
+            throw new Error('Failed to fetch session')
+          }
           const data = await response.json()
-          // Add mock questions data
-          data.questions = generateMockQuestions(data.num_questions)
-          data.active = false // Force active state to false
+
+          // Fetch lecture details if lecture_id exists
+          if (data.lecture_id) {
+            const lectureResponse = await fetch(`http://localhost:8000/api/lectures/${data.lecture_id}`)
+            if (lectureResponse.ok) {
+              const lecture = await lectureResponse.json()
+              data.lecture = lecture
+            }
+          }
+
+          // Fetch session insight
+          const insightResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/insight`)
+          if (insightResponse.ok) {
+            const insight = await insightResponse.json()
+            data.summary = insight.summary
+          }
+
+          // Fetch questions and their insights
+          const questionsResponse = await fetch(`http://localhost:8000/api/sessions/questions/${sessionId}`)
+          if (questionsResponse.ok) {
+            const questionsData = await questionsResponse.json()
+            
+            // For each question, fetch its insights and topics
+            const questionsWithInsights = await Promise.all(questionsData.map(async (question: any) => {
+              // Fetch insights
+              const insightResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/insights`)
+              let responses = []
+              if (insightResponse.ok) {
+                const insights = await insightResponse.json()
+                responses = insights.map((insight: any) => ({
+                  name: insight.error_summary,
+                  value: insight.error_count
+                }))
+                // remove correct and total from insights
+                responses = responses.filter((insight: any) => 
+                  insight.name !== 'Correct' && insight.name !== 'Total'
+                )
+              }
+              
+              // Fetch topics
+              const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
+              let topics = []
+              if (topicsResponse.ok) {
+                topics = await topicsResponse.json()
+              }
+              
+              return {
+                id: question.id,
+                text: question.question_text,
+                question_text: question.question_text,
+                question_number: question.question_number,
+                total_submission: question.total_submission || 0,
+                correct_submission: question.correct_submission || 0,
+                responses,
+                topics
+              }
+            }))
+            
+            data.questions = questionsWithInsights.sort((a, b) => a.question_number - b.question_number)
+          }
+
+          data.active = false
           setSession(data)
+          return true
+        } catch (error) {
+          console.error('Error fetching updated data:', error)
+          return false
         }
-      } catch (error) {
-        console.error('Error fetching updated session:', error)
-      } finally {
-        setAnalyzing(false)
       }
-    }, 3000)
+
+      // Try to fetch updated data multiple times
+      let retries = 0
+      const maxRetries = 3
+      let success = false
+
+      while (retries < maxRetries && !success) {
+        success = await fetchUpdatedData()
+        if (!success) {
+          await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds between retries
+          retries++
+        }
+      }
+
+      if (!success) {
+        throw new Error('Failed to fetch updated data after multiple retries')
+      }
+    } catch (error) {
+      console.error('Error ending session:', error)
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   if (loading) {
