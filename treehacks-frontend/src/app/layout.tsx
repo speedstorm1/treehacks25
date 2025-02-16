@@ -10,7 +10,7 @@ import { ClassGuard } from "@/components/class-guard"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Teacher's Pet",
+  title: "ClassPulse",
   description: "Analytics dashboard for classroom performance",
 }
 

@@ -34,7 +34,7 @@ export function Sidebar() {
     <>
       <SidebarHeader>
         <Link href="/home" className="hover:opacity-80 pl-2">
-          <h2 className="text-xl font-bold">Teacher's Pet</h2>
+          <h2 className="text-xl font-bold">ClassPulse</h2>
         </Link>
       </SidebarHeader>
       <SidebarContent className="flex flex-col h-full">
