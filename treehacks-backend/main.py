@@ -19,6 +19,7 @@ from llm_utils import extract_topics_from_syllabus
 import requests
 import io
 from PyPDF2 import PdfReader
+from datetime import datetime
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -514,6 +515,28 @@ async def upload_syllabus(file: UploadFile = File(...)):
             status_code=400,
             detail=f"Failed to upload syllabus: {str(e)}"
         )
+
+@app.post("/assignment", response_model=AssignmentResponse)
+async def create_assignment(assignment: AssignmentCreate):
+    try:
+        # Convert datetime-local string to date string (YYYY-MM-DD)
+        date_obj = datetime.fromisoformat(assignment.due_date)
+        date_str = date_obj.date().isoformat()
+        
+        response = supabase.table("assignment").insert({
+            "name": assignment.name,
+            "due_date": date_str
+        }).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create assignment")
+            
+        return response.data[0]
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid date format")
+    except Exception as e:
+        print(f"Error in create_assignment: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 def extract_text_from_pdf(pdf_content: bytes) -> str:
     """
