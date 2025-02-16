@@ -17,6 +17,10 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 interface Question {
   id: number
   text: string
+  question_text: string
+  question_number: number
+  total_submission: number
+  correct_submission: number
   responses: Array<{
     name: string
     value: number
@@ -106,18 +110,50 @@ export default function SessionInsights() {
           }
         }
 
-        // Add mock data for questions if session is not active
-        if (!data.active) {
-          data.questions = generateMockQuestions(data.num_questions)
+        // Fetch questions and their insights
+        const questionsResponse = await fetch(`http://localhost:8000/api/sessions/questions/${sessionId}`)
+        if (questionsResponse.ok) {
+          const questionsData = await questionsResponse.json()
           
-          // Fetch topics for each question
-          for (const question of data.questions) {
-            const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
-            if (topicsResponse.ok) {
-              const topics = await topicsResponse.json()
-              question.topics = topics
+          // For each question, fetch its insights and topics
+          const questionsWithInsights = await Promise.all(questionsData.map(async (question: any) => {
+            // Fetch insights
+            const insightResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/insights`)
+            let responses = []
+            let correct = -1
+            let total = -1
+            if (insightResponse.ok) {
+              const insights = await insightResponse.json()
+              responses = insights.map((insight: any) => ({
+                name: insight.error_summary,
+                value: insight.error_count
+              }))
+              correct = insights.find((insight: any) => insight.error_summary === 'Correct')?.error_count || 0
+              total = insights.find((insight: any) => insight.error_summary === 'Total')?.error_count || 0
+              // remove correct and total from insights
+              responses = responses.filter((insight: any) => insight.name !== 'Correct' && insight.name !== 'Total')
             }
-          }
+            
+            // Fetch topics
+            const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
+            let topics = []
+            if (topicsResponse.ok) {
+              topics = await topicsResponse.json()
+            }
+            
+            return {
+              id: question.id,
+              text: question.question_text,
+              question_text: question.question_text,
+              question_number: question.question_number,
+              total_submission: question.total_submission || 0,
+              correct_submission: question.correct_submission || 0,
+              responses,
+              topics
+            }
+          }))
+          
+          data.questions = questionsWithInsights.sort((a, b) => a.question_number - b.question_number)
         }
         
         setSession(data)
@@ -128,10 +164,9 @@ export default function SessionInsights() {
           const progressData = await progressResponse.json()
           setResponseCount(progressData.response_count)
         }
-
-        setLoading(false)
       } catch (error) {
         console.error('Error fetching session:', error)
+      } finally {
         setLoading(false)
       }
     }

@@ -711,3 +711,48 @@ async def get_session_insight(session_id: str):
         return insight_result.data[0]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/session_questions/{question_id}/insights")
+async def get_session_question_insights(question_id: str):
+    try:
+        # Get insights for this question
+        result = supabase.table("session_question_extracted_insight").select(
+            "id",
+            "error_summary",
+            "error_count",
+            "created_at"
+        ).eq("question_id", question_id).execute()
+        
+        if not result.data:
+            return []
+            
+        # Get the question details to include total and correct submissions
+        question_result = supabase.table("session_questions").select(
+            "total_submission",
+            "correct_submission"
+        ).eq("id", question_id).execute()
+        
+        if question_result.data:
+            total_submission = question_result.data[0].get("total_submission", 1) - 1
+            correct_submission = question_result.data[0].get("correct_submission", 1) - 1
+            
+            # Add a "Correct" insight with the correct_submission count
+            if correct_submission > 0:
+                result.data.append({
+                    "id": None,
+                    "error_summary": "Correct",
+                    "error_count": correct_submission,
+                    "created_at": None
+                })
+            
+            # Add a "Total" insight with the total_submission count
+            result.data.append({
+                "id": None,
+                "error_summary": "Total",
+                "error_count": total_submission,
+                "created_at": None
+            })
+        
+        return result.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
