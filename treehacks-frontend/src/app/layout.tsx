@@ -5,6 +5,7 @@ import "./globals.css"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Sidebar } from "@/components/sidebar"
 import { ClassProvider } from "./context/ClassContext"
+import { ClassGuard } from "@/components/class-guard"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,7 +28,9 @@ export default function RootLayout({
               <Sidebar />
               <div className="flex-1 min-w-0 overflow-x-hidden">
                 <main className="h-full w-full">
-                  {children}
+                  <ClassGuard>
+                    {children}
+                  </ClassGuard>
                 </main>
               </div>
             </div>

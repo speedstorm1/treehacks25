@@ -27,11 +27,13 @@ class SessionCreate(BaseModel):
     num_questions: int
     lecture_id: str
     timestamp: float
+    class_id: str
 
 class LectureCreate(BaseModel):
     name: str
     slides: str | None = None
     lecture_video: str | None = None
+    class_id: str
 
 class ResponseCreate(BaseModel):
     question_id: str

@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Breadcrumb } from "@/components/breadcrumb"
 import Link from "next/link"
-import { BookOpen } from "lucide-react"
+import { BookOpen, PlusCircle } from "lucide-react"
 import { Suspense, useEffect, useState, useCallback } from "react"
 import { LectureContent } from "./lecture-content"
 import { useParams } from "next/navigation"
+import { useClass } from "@/app/context/ClassContext"
 
 interface Lecture {
   id: string
@@ -43,6 +44,7 @@ async function getSessions(lectureId: string) {
 export default function LecturePage() {
   const params = useParams()
   const lectureId = params?.id as string
+  const { classId } = useClass()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -53,11 +55,8 @@ export default function LecturePage() {
   }, [])
 
   useEffect(() => {
-    async function fetchData() {
-      if (!lectureId) return
-      
+    const fetchData = async () => {
       try {
-        setIsLoading(true)
         const [lectureData, sessionsData] = await Promise.all([
           getLecture(lectureId),
           getSessions(lectureId)
@@ -74,14 +73,12 @@ export default function LecturePage() {
     fetchData()
   }, [lectureId])
 
-  if (isLoading || !lecture) {
-    return (
-      <div className="min-h-full p-8">
-        <div className="max-w-[2000px] mx-auto space-y-8">
-          <LectureLoadingSkeleton />
-        </div>
-      </div>
-    )
+  if (isLoading) {
+    return <LectureLoadingSkeleton />
+  }
+
+  if (!lecture) {
+    return <div>Lecture not found</div>
   }
 
   return (
@@ -89,7 +86,7 @@ export default function LecturePage() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             { label: lecture.name, href: `/lectures/${lecture.id}` },
           ]}
@@ -99,45 +96,47 @@ export default function LecturePage() {
           <h1 className="text-3xl font-bold">{lecture.name}</h1>
           <Button size="lg" asChild>
             <Link href={`/lectures/${lecture.id}/add-session?timestamp=${currentTime}`}>
-              <BookOpen className="mr-2 h-5 w-5" />
-              Create Session
+              <PlusCircle className="mr-2 h-5 w-5" />
+              New Learning Check
             </Link>
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl">Lecture Content</CardTitle>
-              <CardDescription className="text-base">View lecture video and slides</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0">
-              <Suspense fallback={<LectureContentSkeleton />}>
-                <LectureContent lecture={lecture} onTimeUpdate={handleTimeUpdate} />
-              </Suspense>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-8">
+          <Suspense fallback={<LectureContentSkeleton />}>
+            <LectureContent 
+              lecture={lecture} 
+              onTimeUpdate={handleTimeUpdate}
+            />
+          </Suspense>
 
-          <Card>
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl">Q&A Sessions</CardTitle>
-              <CardDescription className="text-base">View all Q&A sessions for this lecture</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0">
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {sessions.map((session) => (
-                  <Link key={session.id} href={`/sessions/${session.short_id}`}>
-                    <Card className="hover:bg-accent transition-colors">
-                      <CardHeader>
-                        <CardTitle>{session.title}</CardTitle>
-                        <CardDescription>{session.num_questions} questions</CardDescription>
-                      </CardHeader>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Learning Checks</h2>
+            <div className="grid gap-4">
+              {sessions.map((session) => (
+                <Link key={session.id} href={`/sessions/${session.short_id}`}>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5" />
+                        {session.title}
+                      </CardTitle>
+                      <CardDescription>
+                        {session.num_questions} questions
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
+              {sessions.length === 0 && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-center text-muted-foreground">No learning checks available for this lecture</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -146,59 +145,31 @@ export default function LecturePage() {
 
 function LectureLoadingSkeleton() {
   return (
-    <>
-      <div className="h-8 w-96 bg-muted rounded animate-pulse" />
-      
-      <div className="flex justify-between items-center">
-        <div className="h-10 w-48 bg-muted rounded animate-pulse" />
-        <div className="h-10 w-32 bg-muted rounded animate-pulse" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardHeader className="p-8">
-            <div className="space-y-2">
-              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-              <div className="h-4 w-96 bg-muted rounded animate-pulse" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="aspect-video bg-muted rounded animate-pulse" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-8">
-            <div className="space-y-2">
-              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
-              <div className="h-4 w-96 bg-muted rounded animate-pulse" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-8 pt-0">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <div className="space-y-2">
-                      <div className="h-6 w-32 bg-muted rounded animate-pulse" />
-                      <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                    </div>
-                  </CardHeader>
-                </Card>
+    <div className="min-h-full p-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+        <div className="h-8 w-64 bg-muted rounded animate-pulse" />
+        <div className="grid grid-cols-1 gap-8">
+          <LectureContentSkeleton />
+          <div className="space-y-4">
+            <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-24 bg-muted rounded animate-pulse" />
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
 function LectureContentSkeleton() {
   return (
-    <div className="space-y-4 animate-pulse">
-      <div className="h-[400px] bg-muted rounded" />
-      <div className="h-4 bg-muted rounded w-32" />
+    <div className="space-y-4">
+      <div className="h-8 w-32 bg-muted rounded animate-pulse" />
+      <div className="h-[400px] bg-muted rounded animate-pulse" />
     </div>
   )
 }

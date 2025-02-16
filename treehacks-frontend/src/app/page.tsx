@@ -57,108 +57,94 @@ export default function Home() {
 
       if (error) throw error
 
+      setClasses([...(data || []), ...classes])
       setNewClassName("")
       setIsDialogOpen(false)
-      fetchClasses()
     } catch (error) {
       console.error("Error adding class:", error)
     }
   }
 
-  const handleClassSelect = (classId: string) => {
+  const handleSelectClass = (classId: string) => {
     setClassId(classId)
     router.push("/home")
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-full p-8">
-        <div className="max-w-[2000px] mx-auto space-y-8">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-64" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-[200px] bg-muted rounded" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-full p-8">
-      <div className="max-w-[2000px] mx-auto space-y-8">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Select a Class</h1>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Class
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Class</DialogTitle>
-                <DialogDescription>
-                  Enter a name for your new class.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Class Name</Label>
-                  <Input
-                    id="title"
-                    value={newClassName}
-                    onChange={(e) => setNewClassName(e.target.value)}
-                    placeholder="Enter class name..."
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleAddClass}>
-                  Add Class
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight">Welcome to Teacher&apos;s Pet</h1>
+            <p className="text-lg text-muted-foreground">
+              Select a class to get started or create a new one
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {classes.length === 0 ? (
-            <div className="col-span-2 flex flex-col items-center justify-center p-12 border rounded-lg bg-card">
-              <p className="text-xl mb-4">No classes yet. Create your first class to get started!</p>
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Class
-              </Button>
-            </div>
-          ) : (
-            classes.map((cls) => (
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Your Classes</h2>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-5 w-5" />
+                  New Class
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Class</DialogTitle>
+                  <DialogDescription>
+                    Add a new class to manage lectures and sessions
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Class Name</Label>
+                    <Input
+                      id="name"
+                      value={newClassName}
+                      onChange={(e) => setNewClassName(e.target.value)}
+                      placeholder="Enter class name"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={handleAddClass}
+                    disabled={!newClassName.trim()}
+                  >
+                    Create Class
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="grid gap-4">
+            {classes.map((classItem) => (
               <Card
-                key={cls.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => handleClassSelect(cls.id)}
+                key={classItem.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => handleSelectClass(classItem.id)}
               >
-                <CardHeader className="p-6">
-                  <CardTitle>{cls.title}</CardTitle>
+                <CardHeader>
+                  <CardTitle>{classItem.title}</CardTitle>
                   <CardDescription>
-                    Created: {new Date(cls.created_at).toLocaleDateString()}
+                    Created on {new Date(classItem.created_at).toLocaleDateString()}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <p className="text-sm text-muted-foreground">
-                    {cls.syllabus ? "Syllabus uploaded" : "No syllabus uploaded yet"}
+              </Card>
+            ))}
+            {!isLoading && classes.length === 0 && (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No classes yet. Create your first class to get started!
                   </p>
                 </CardContent>
               </Card>
-            ))
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -72,7 +72,8 @@ async def create_session(session: SessionCreate):
             'active': True,
             'num_questions': session.num_questions,
             'lecture_id': session.lecture_id,
-            'timestamp': session.timestamp
+            'timestamp': session.timestamp,
+            'class_id': session.class_id
         }).execute()
         
         return result.data[0]
@@ -81,9 +82,11 @@ async def create_session(session: SessionCreate):
 
 #list all all sessions
 @app.get("/api/sessions")
-async def list_sessions():
-    result = supabase.table('sessions').select('*').order('created_at', desc=True).execute()
-    return result.data
+async def list_sessions(class_id: str):
+    if class_id is None:
+        raise HTTPException(status_code=400, detail="Class id is required")
+    result = supabase.table('sessions').select('*').eq('class_id', class_id).order('created_at', desc=True).execute()
+    return result.data or []
 
 #given a session short id, get the session data
 @app.get("/api/sessions/{short_id}")
@@ -190,17 +193,18 @@ async def create_lecture(lecture: LectureCreate):
         result = supabase.table('lectures').insert({
             'name': lecture.name,
             'slides': lecture.slides,
-            'lecture_video': lecture.lecture_video
+            'lecture_video': lecture.lecture_video,
+            'class_id': lecture.class_id
         }).execute()
         
         return result.data[0]
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#list all lectures
+#list all lectures for a class
 @app.get("/api/lectures")
-async def list_lectures():
-    result = supabase.table('lectures').select('*').order('created_at', desc=True).execute()
+async def list_lectures(class_id: str):
+    result = supabase.table('lectures').select('*').eq('class_id', class_id).order('created_at', desc=True).execute()
     return result.data
 
 #get a specific lecture given the id
@@ -505,3 +509,16 @@ async def get_questions(short_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     return result.data
+
+#close a session given the session id
+@app.patch("/api/sessions/{short_id}/close")
+async def close_session(short_id: str):
+    # Convert to uppercase to make it case-insensitive
+    short_id = short_id.upper()
+    
+    result = supabase.table('sessions').update({'active': False}).eq('short_id', short_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return result.data[0]

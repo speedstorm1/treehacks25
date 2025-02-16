@@ -1,4 +1,4 @@
-"use client"
+'use client'
 
 import { useParams, useRouter } from "next/navigation"
 import { CustomPieChart } from "@/components/pie-chart"
@@ -12,7 +12,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-type Question = {
+interface Question {
   id: number
   text: string
   responses: Array<{
@@ -21,7 +21,7 @@ type Question = {
   }>
 }
 
-type Session = {
+interface Session {
   id: string
   short_id: string
   title: string
@@ -36,10 +36,6 @@ type Session = {
   }
 }
 
-type ResponseCount = {
-  response_count: number
-}
-
 const formatDate = (dateString: string) => {
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('en-US', {
@@ -52,7 +48,20 @@ const formatDate = (dateString: string) => {
   }).format(date)
 }
 
+const generateMockQuestions = (numQuestions: number) => {
+  return Array.from({ length: numQuestions }, (_, i) => ({
+    id: i + 1,
+    text: `Question ${i + 1}`,
+    responses: [
+      { name: "Correct", value: Math.floor(Math.random() * 60) + 20 },
+      { name: "Partially Correct", value: Math.floor(Math.random() * 40) + 10 },
+      { name: "Incorrect", value: Math.floor(Math.random() * 30) + 10 },
+    ]
+  }))
+}
+
 export default function SessionInsights() {
+  const router = useRouter()
   const params = useParams()
   const sessionId = params.id as string
   const [session, setSession] = useState<Session | null>(null)
@@ -82,16 +91,7 @@ export default function SessionInsights() {
 
         // Add mock data for questions if session is not active
         if (!data.active) {
-          const mockQuestions = Array.from({ length: data.num_questions }, (_, i) => ({
-            id: i + 1,
-            text: `Question ${i + 1}`,
-            responses: [
-              { name: "Correct", value: Math.floor(Math.random() * 60) + 20 },
-              { name: "Partially Correct", value: Math.floor(Math.random() * 40) + 10 },
-              { name: "Incorrect", value: Math.floor(Math.random() * 30) + 10 },
-            ]
-          }))
-          data.questions = mockQuestions
+          data.questions = generateMockQuestions(data.num_questions)
         }
         
         setSession(data)
@@ -104,9 +104,6 @@ export default function SessionInsights() {
         }
 
         setLoading(false)
-        if (!data.active) {
-          setAnalyzing(false)
-        }
       } catch (error) {
         console.error('Error fetching session:', error)
         setLoading(false)
@@ -122,14 +119,14 @@ export default function SessionInsights() {
 
     // Function to fetch the latest count
     const fetchLatestCount = async () => {
-      const { data, error } = await supabase
-        .from('session_question_response_count')
-        .select('response_count')
-        .eq('session_id', session.id)
-        .single()
-
-      if (data && data.response_count !== responseCount) {
-        setResponseCount(data.response_count)
+      try {
+        const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}/progress`)
+        if (response.ok) {
+          const data = await response.json()
+          setResponseCount(data.response_count)
+        }
+      } catch (error) {
+        console.error('Error fetching response count:', error)
       }
     }
 
@@ -141,19 +138,42 @@ export default function SessionInsights() {
     return () => {
       clearInterval(pollInterval)
     }
-  }, [session?.id, session?.active, responseCount])
+  }, [session?.active, sessionId])
 
   // Handle session end
   const handleSessionEnd = async () => {
     setAnalyzing(true)
-    // Simulate AI analysis time
-    setTimeout(() => {
-      window.location.reload()
+    // Keep the analyzing state for 3 seconds before refreshing
+    setTimeout(async () => {
+      try {
+        // Fetch updated session data
+        const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}`)
+        if (response.ok) {
+          const data = await response.json()
+          // Add mock questions data
+          data.questions = generateMockQuestions(data.num_questions)
+          data.active = false // Force active state to false
+          setSession(data)
+        }
+      } catch (error) {
+        console.error('Error fetching updated session:', error)
+      } finally {
+        setAnalyzing(false)
+      }
     }, 3000)
   }
 
   if (loading) {
-    return <div className="min-h-full p-8">Loading...</div>
+    return (
+      <div className="min-h-full p-8">
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"/>
+          <div className="text-2xl font-semibold text-center">
+            Loading Session...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!session) {
@@ -165,11 +185,11 @@ export default function SessionInsights() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             ...(session.lecture 
               ? [{ label: session.lecture.name, href: `/lectures/${session.lecture.id}` }]
-              : [{ label: "Sessions", href: "/sessions" }]
+              : []
             ),
             { label: session.title, href: `/sessions/${session.short_id}` },
           ]}
@@ -180,8 +200,7 @@ export default function SessionInsights() {
           {session.active && (
             <CloseSessionButton 
               sessionId={session.short_id}
-              size="default"
-              onSessionClosed={handleSessionEnd}
+              onClose={handleSessionEnd}
             />
           )}
         </div>
@@ -241,14 +260,34 @@ export default function SessionInsights() {
                 </CardContent>
               </Card>
 
-              {!session.active && session.questions?.map((question) => (
+              <Card>
+                <CardHeader className="p-8">
+                  <CardTitle className="text-2xl">Session Summary</CardTitle>
+                  <CardDescription className="text-base">Overall performance and key insights</CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 pt-0">
+                  <div className="space-y-4">
+                    <p className="text-lg">
+                      Based on the responses received, students demonstrated a good understanding of the material.
+                      The average correctness rate was approximately 65%, with some questions showing particularly strong performance.
+                    </p>
+                    <p className="text-lg">
+                      Areas for potential review include concepts covered in questions 2 and 4, where students showed more varied responses.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {session.questions?.map((question) => (
                 <Card key={question.id}>
                   <CardHeader className="p-8">
                     <CardTitle className="text-2xl">{question.text}</CardTitle>
                     <CardDescription className="text-base">Response distribution</CardDescription>
                   </CardHeader>
                   <CardContent className="p-8 pt-0">
-                    <CustomPieChart data={question.responses} />
+                    <div className="h-[300px]">
+                      <CustomPieChart data={question.responses} />
+                    </div>
                   </CardContent>
                 </Card>
               ))}

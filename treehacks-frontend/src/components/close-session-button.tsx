@@ -2,62 +2,52 @@
 
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
-interface CloseSessionButtonProps {
+interface Props {
   sessionId: string
-  onSessionClosed?: () => void
-  variant?: 'default' | 'destructive'
-  size?: 'default' | 'sm' | 'lg'
-  redirectTo?: string
+  onClose?: () => void
 }
 
-export function CloseSessionButton({ 
-  sessionId, 
-  onSessionClosed, 
-  variant = 'destructive',
-  size = 'sm',
-  redirectTo
-}: CloseSessionButtonProps) {
-  const router = useRouter()
+export function CloseSessionButton({ sessionId, onClose }: Props) {
+  const [isClosing, setIsClosing] = useState(false)
 
   const closeSession = async () => {
+    if (!confirm('Are you sure you want to close this session? This cannot be undone.')) {
+      return
+    }
+
+    setIsClosing(true)
+
     try {
-      console.log("Closing session", sessionId)
       const response = await fetch(`http://localhost:8000/api/sessions/${sessionId}/close`, {
         method: 'PATCH',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       })
-      
+
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Error response:', errorText)
         throw new Error('Failed to close session')
       }
 
-      const data = await response.json()
-      console.log("Session closed successfully:", data)
-      
-      if (onSessionClosed) {
-        onSessionClosed()
-      }
-      
-      if (redirectTo) {
-        router.push(redirectTo)
-      }
+      onClose?.()
     } catch (error) {
       console.error('Error closing session:', error)
+      alert('Failed to close session. Please try again.')
+    } finally {
+      setIsClosing(false)
     }
   }
 
   return (
-    <Button
-      variant={variant}
-      size={size}
+    <Button 
+      variant="destructive" 
       onClick={closeSession}
+      disabled={isClosing}
     >
-      End Session
+      {isClosing ? "Closing..." : "Close Session"}
     </Button>
   )
 }

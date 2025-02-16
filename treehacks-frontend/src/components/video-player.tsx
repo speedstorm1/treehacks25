@@ -51,110 +51,95 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({ url, 
 
   useImperativeHandle(ref, () => ({
     getCurrentTime: () => {
-      if (playerRef.current) {
-        return playerRef.current.getCurrentTime() || 0
-      }
-      return 0
+      if (!playerRef.current) return 0
+      return playerRef.current.getCurrentTime()
     }
   }))
 
   useEffect(() => {
     if (!isYouTubeUrl(url)) return
 
-    const videoId = getYouTubeVideoId(url)
-    if (!videoId) return
-
     let isMounted = true
 
     const initPlayer = async () => {
-      try {
-        await loadYouTubeAPI()
-        
-        if (!containerRef.current || !isMounted) return
+      await loadYouTubeAPI()
+      
+      if (!isMounted || !containerRef.current) return
 
-        playerRef.current = new window.YT.Player(containerRef.current, {
-          videoId,
-          height: '100%',
-          width: '100%',
-          playerVars: {
-            autoplay: 0,
-            modestbranding: 1,
-            rel: 0
-          },
-          events: {
-            onStateChange: (event) => {
-              // Update time when playing
-              if (event.data === window.YT.PlayerState.PLAYING && timeUpdateCallback) {
-                const interval = setInterval(() => {
-                  if (!isMounted) return
-                  const time = playerRef.current?.getCurrentTime() || 0
-                  timeUpdateCallback(time)
-                }, 1000)
-                
-                // Store interval ID on the player instance
-                if (playerRef.current) {
-                  playerRef.current._timeUpdateInterval = interval
-                }
-              } else {
-                // Clear interval when not playing
-                if (playerRef.current?._timeUpdateInterval) {
-                  clearInterval(playerRef.current._timeUpdateInterval)
-                }
+      const videoId = getYouTubeVideoId(url)
+      if (!videoId) return
+
+      // Create a new div for the player
+      const playerDiv = document.createElement('div')
+      containerRef.current.appendChild(playerDiv)
+
+      const player = new window.YT.Player(playerDiv, {
+        videoId,
+        height: '400',
+        width: '100%',
+        playerVars: {
+          autoplay: 0,
+          modestbranding: 1,
+          rel: 0
+        },
+        events: {
+          onStateChange: (event) => {
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              player._timeUpdateInterval = setInterval(() => {
+                const currentTime = player.getCurrentTime()
+                timeUpdateCallback(currentTime)
+              }, 1000)
+            } else {
+              if (player._timeUpdateInterval) {
+                clearInterval(player._timeUpdateInterval)
+                player._timeUpdateInterval = undefined
               }
             }
           }
-        })
-      } catch (err) {
-        console.error('Failed to initialize YouTube player:', err)
-      }
+        }
+      })
+
+      playerRef.current = player
     }
 
     initPlayer()
 
     return () => {
       isMounted = false
-      if (playerRef.current?._timeUpdateInterval) {
-        clearInterval(playerRef.current._timeUpdateInterval)
-      }
       if (playerRef.current) {
+        if (playerRef.current._timeUpdateInterval) {
+          clearInterval(playerRef.current._timeUpdateInterval)
+        }
         playerRef.current.destroy()
+        playerRef.current = null
+      }
+      // Clean up the container
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''
       }
     }
   }, [url, timeUpdateCallback])
 
   if (isYouTubeUrl(url)) {
-    const videoId = getYouTubeVideoId(url)
-    if (!videoId) {
-      return <div className="text-red-500">Invalid YouTube URL</div>
-    }
+    return <div ref={containerRef} className="w-full h-full" />
+  }
 
-    return (
-      <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-        <div 
-          ref={containerRef}
-          className="absolute top-0 left-0 w-full h-full rounded-lg"
-        />
-      </div>
-    )
-  } else if (isGoogleDriveUrl(url)) {
+  if (isGoogleDriveUrl(url)) {
     const embedUrl = getGoogleDriveEmbedUrl(url)
-    if (!embedUrl) {
-      return <div className="text-red-500">Invalid Google Drive URL</div>
-    }
+    if (!embedUrl) return null
 
     return (
-      <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+      <div className="w-full h-full">
         <iframe
           src={embedUrl}
-          className="absolute top-0 left-0 w-full h-full rounded-lg"
-          allow="autoplay"
+          className="w-full h-full rounded-lg"
           allowFullScreen
         />
       </div>
     )
-  } else {
-    return <div className="text-red-500">Unsupported video URL. Please use YouTube or Google Drive.</div>
   }
+
+  return null
 })
 
 VideoPlayer.displayName = 'VideoPlayer'

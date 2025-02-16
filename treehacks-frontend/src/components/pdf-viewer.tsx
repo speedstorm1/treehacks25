@@ -21,7 +21,7 @@ export function PDFViewer({ url }: PDFViewerProps) {
   }
 
   return (
-    <div className="relative w-full" style={{ paddingTop: '100%' }}>
+    <div className="relative w-full" style={{ height: '400px' }}>
       <iframe
         src={embedUrl}
         className="absolute top-0 left-0 w-full h-full rounded-lg"

@@ -1,16 +1,35 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-type ClassContextType = {
+interface ClassContextType {
   classId: string | null;
   setClassId: (id: string | null) => void;
-};
+}
 
-const ClassContext = createContext<ClassContextType | undefined>(undefined);
+const ClassContext = createContext<ClassContextType>({
+  classId: null,
+  setClassId: () => {},
+});
 
-export function ClassProvider({ children }: { children: ReactNode }) {
-  const [classId, setClassId] = useState<string | null>(null);
+export function ClassProvider({ children }: { children: React.ReactNode }) {
+  const [classId, setClassIdState] = useState<string | null>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("classId");
+    }
+    return null;
+  });
+
+  const setClassId = (id: string | null) => {
+    setClassIdState(id);
+    // Persist to localStorage
+    if (id) {
+      localStorage.setItem("classId", id);
+    } else {
+      localStorage.removeItem("classId");
+    }
+  };
 
   return (
     <ClassContext.Provider value={{ classId, setClassId }}>
@@ -19,10 +38,4 @@ export function ClassProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useClass() {
-  const context = useContext(ClassContext);
-  if (context === undefined) {
-    throw new Error("useClass must be used within a ClassProvider");
-  }
-  return context;
-}
+export const useClass = () => useContext(ClassContext);

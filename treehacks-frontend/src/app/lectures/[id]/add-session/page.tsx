@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
+import { useClass } from "@/app/context/ClassContext"
 
 interface Lecture {
   id: string
@@ -19,6 +20,8 @@ export default function AddSession() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { classId } = useClass()
+  
   const lectureId = params?.id as string
   const timestamp = searchParams.get('timestamp') || '0'
 
@@ -27,6 +30,12 @@ export default function AddSession() {
   const [numQuestions, setNumQuestions] = useState("1")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
   useEffect(() => {
     const fetchLecture = async () => {
       try {
@@ -34,12 +43,9 @@ export default function AddSession() {
         if (!response.ok) throw new Error('Failed to fetch lecture')
         const data = await response.json()
         setLecture(data)
-        // Set default title when lecture data is loaded
-        const time = parseFloat(timestamp)
-        const minutes = Math.floor(time / 60)
-        const seconds = Math.floor(time % 60)
-        const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
-        setTitle(`Session @ ${timeStr}`)
+        
+
+        setTitle(`Session @ ${formatTime(parseFloat(timestamp))}`)
       } catch (error) {
         console.error('Error fetching lecture:', error)
       }
@@ -62,7 +68,8 @@ export default function AddSession() {
           title,
           num_questions: parseInt(numQuestions),
           lecture_id: lectureId,
-          timestamp: parseFloat(timestamp)
+          timestamp: parseFloat(timestamp),
+          class_id: classId
         })
       })
 
@@ -84,57 +91,53 @@ export default function AddSession() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             { label: lecture.name, href: `/lectures/${lecture.id}` },
-            { label: "New Session", href: `/lectures/${lecture.id}/add-session` },
+            { label: "Add Learning Check", href: `/lectures/${lecture.id}/add-session?timestamp=${timestamp}` },
           ]}
         />
 
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Create New Session</h1>
+          <h1 className="text-3xl font-bold">Create New Learning Check</h1>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 max-w-2xl">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 max-w-2xl">
           <Card>
-            <CardHeader className="p-8">
-              <CardTitle className="text-2xl">Session Details</CardTitle>
-              <CardDescription className="text-base">
-                Create a new Q&A session for {lecture.name}
+            <CardHeader>
+              <CardTitle>Learning Check Details</CardTitle>
+              <CardDescription>
+                Add a new active learning check session at {formatTime(parseFloat(timestamp))}
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-8 pt-0">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Session Title</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="numQuestions">Number of Questions</Label>
-                  <Input
-                    id="numQuestions"
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={numQuestions}
-                    onChange={(e) => setNumQuestions(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Session"}
-                </Button>
-              </form>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Session Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter session title"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numQuestions">Number of Questions</Label>
+                <Input
+                  id="numQuestions"
+                  type="number"
+                  min="1"
+                  value={numQuestions}
+                  onChange={(e) => setNumQuestions(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Session"}
+              </Button>
             </CardContent>
           </Card>
-        </div>
+        </form>
       </div>
     </div>
   )
