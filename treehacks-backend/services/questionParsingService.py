@@ -113,6 +113,10 @@ async def parse_and_store_questions(assignment_id: int, pdf_bytes: bytes) -> Lis
         # Split into questions
         questions = await split_into_questions(text)
         print("split into questions")
+
+        assignment_result = supabase.table('assignment').select('*').eq('id', assignment_id).execute()
+        num_questions = assignment_result.data[0].get('num_questions', 3)  # default to 3 if not specified
+        class_id = assignment_result.data[0].get('class_id')
         
         # Store each question in Supabase
         stored_questions = []
@@ -126,6 +130,23 @@ async def parse_and_store_questions(assignment_id: int, pdf_bytes: bytes) -> Lis
             
             if response.data:
                 stored_questions.append(response.data) #maybe get [0]?
+
+            # Use LLM to categorize the question into multiple topics
+            question["topic_ids"] = categorize_question(
+                question["text"],
+                class_id
+            )
+            
+            question_id = response.data[0]['id']
+            for topic_id in question["topic_ids"]:
+                mapping_data = {
+                    'question_id': question_id,
+                    'topic_id': topic_id
+                }
+                mapping_response = supabase.table('assignment_question<>topic').insert(mapping_data).execute()
+                if not mapping_response or not mapping_response.data:
+                    raise ValueError(f"Failed to create mapping for question {question_id} and topic {topic_id}")
+                        
             
         return stored_questions
         

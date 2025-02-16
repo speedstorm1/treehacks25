@@ -18,15 +18,16 @@ def setup_gemini():
     genai.configure(api_key=api_key)
     return genai.GenerativeModel('gemini-pro')
 
-def get_all_topics() -> List[Dict]:
+def get_all_topics(class_id: str) -> List[Dict]:
     """Get all topics from the topics table."""
     try:
-        response = supabase.table('topic').select('*').execute()
+        response = supabase.table('topic').select('*').eq('class_id', class_id).execute()
         if not response or not response.data:
-            raise Exception("Invalid response from Supabase")
+            return []
         return response.data
     except Exception as e:
-        raise Exception(f"Error fetching topics: {str(e)}")
+        print(f"Error getting topics: {str(e)}")
+        return []
 
 def get_topic_by_id(topic_id: str) -> Dict:
     """Get a specific topic by ID."""
@@ -40,20 +41,20 @@ def get_topic_by_id(topic_id: str) -> Dict:
     except Exception as e:
         raise Exception(f"Error fetching topic: {str(e)}")
 
-def get_topics_for_question_generation() -> List[Dict]:
+def get_topics_for_question_generation(class_id: str) -> List[Dict]:
     """Get topics in a format suitable for question generation context."""
-    topics = get_all_topics()
+    topics = get_all_topics(class_id)
     return [{"id": topic["id"], "title": topic["title"]} 
             for topic in topics]
 
-def categorize_question(question_text: str, explanation: str) -> List[str]:
+def categorize_question(question_text: str, explanation: str, class_id: str) -> List[str]:
     """
     Use LLM to categorize a question into one or more relevant topics.
     Returns a list of topic IDs that the question belongs to.
     """
     try:
         # Get all available topics
-        topics = get_all_topics()
+        topics = get_all_topics(class_id)
         if not topics:
             raise Exception("No topics available for categorization")
         

@@ -443,66 +443,66 @@ async def upload_assignment_pdf(assignment_id: int, file: UploadFile = File(...)
 
 @app.get("/api/topics")
 async def get_topics(class_id: str):
-    result = supabase.table('topic').select('*').eq('class_id', class_id).execute()
-    return result.data
+    try:
+        topics = get_all_topics(class_id)
+        return topics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/api/topic/{topic_id}")
+@app.put("/api/topics/{topic_id}")
 async def modify_topic(topic_id: str, topic: TopicUpdate):
     try:
-        result = supabase.table('topic').update({
-            'title': topic.title
-        }).eq('id', topic_id).execute()
-        return result.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/api/topic")
-async def add_topic(topic: TopicUpdate):
-    try:
-        result = supabase.table('topic').insert({
+        # First verify the topic exists
+        existing = supabase.table('topic').select('*').eq('id', topic_id).execute()
+        if not existing or not existing.data:
+            raise HTTPException(status_code=404, detail="Topic not found")
+            
+        # Update the topic
+        response = supabase.table('topic').update({
             'title': topic.title,
-            'class_id': topic.class_id
-        }).execute()
-        return result.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.post("/api/topic/generate")
-async def generate_topic(syllabus: Syllabus):
-    try:
-        # Download the PDF content directly from Supabase URL
-        response = requests.get(syllabus.syllabus_url)
-        if not response.ok:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to fetch syllabus: {response.status_code}"
-            )
-            
-        pdf_content = response.content
-        text_content = extract_text_from_pdf(pdf_content)
-
-        # Extract topics using OpenAI
-        topics = extract_topics_from_syllabus(text_content)
+            'description': topic.description
+        }).eq('id', topic_id).execute()
         
-        # Insert topics into the database
-        for topic in topics:
-            supabase.table('topic').insert({
-                'title': topic,
-                'class_id': syllabus.class_id
-            }).execute()
+        if not response or not response.data:
+            raise HTTPException(status_code=500, detail="Failed to update topic")
             
-        return {"message": "Topics generated successfully", "topics": topics}
+        return response.data[0]
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/topic/delete/{topic_id}")
+@app.post("/api/topics")
+async def add_topic(topic: TopicUpdate, class_id: str):
+    try:
+        response = supabase.table('topic').insert({
+            'title': topic.title,
+            'description': topic.description,
+            'class_id': class_id
+        }).execute()
+        
+        if not response or not response.data:
+            raise HTTPException(status_code=500, detail="Failed to create topic")
+            
+        return response.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/topics/{topic_id}")
 async def delete_topic(topic_id: str):
-    result = supabase.table('topic').delete().eq('id', topic_id).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Topic not found")
-    
-    return result.data[0]
+    try:
+        # First verify the topic exists
+        existing = supabase.table('topic').select('*').eq('id', topic_id).execute()
+        if not existing or not existing.data:
+            raise HTTPException(status_code=404, detail="Topic not found")
+            
+        # Delete the topic
+        response = supabase.table('topic').delete().eq('id', topic_id).execute()
+        
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to delete topic")
+            
+        return {"message": "Topic deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/syllabus/upload")
 async def upload_syllabus(file: UploadFile = File(...)):

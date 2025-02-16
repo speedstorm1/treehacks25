@@ -157,12 +157,14 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         if not contents:
             raise ValueError("No content was retrieved from lecture")
             
-        # Get lecture info to get number of questions
+        # Get lecture info to get number of questions and class_id
         lecture_result = supabase.table('lectures').select('*').eq('id', lecture_id).execute()
         if not lecture_result or not lecture_result.data:
             raise ValueError(f"Lecture {lecture_id} not found")
         lecture = lecture_result.data[0]
-        num_questions = lecture.get('num_questions', 3)  # default to 3 if not specified
+        session_result = supabase.table('sessions').select('*').eq('id', session_id).execute()
+        num_questions = session_result.data[0].get('num_questions', 3)  # default to 3 if not specified
+        class_id = lecture['class_id']
         
         # Add the instruction prompt as the first content item
         prompt = f"""You are an expert teaching assistant helping to generate questions to test student understanding.
@@ -210,7 +212,8 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
             # Use LLM to categorize the question into multiple topics
             question["topic_ids"] = categorize_question(
                 question["question"], 
-                question.get("explanation", "")
+                question.get("explanation", ""),
+                class_id
             )
             # print(question, question["topic_ids"])
             
