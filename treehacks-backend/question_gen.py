@@ -169,7 +169,7 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         # Add the instruction prompt as the first content item
         prompt = f"""You are an expert teaching assistant helping to generate questions to test student understanding.
         Based on the lecture slides (shown as images) and transcript provided, generate {num_questions} questions that test student comprehension
-        of the key concepts covered so far. Each question should with an emphasis on the most recent slide shown and test big picture concepts:
+        of the key concepts covered so far. Each question should with an emphasis on the most recent slide shown and test big picture concepts. Each question should be able to stand alone, provide all code snippets required to answer the question:
         1. Test understanding, not just recall
         2. Be clear and unambiguous
         3. Focus on important concepts, not minor details
