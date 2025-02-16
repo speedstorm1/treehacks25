@@ -88,3 +88,4 @@ class Syllabus(BaseModel):
 class AssignmentCreate(BaseModel):
     name: str
     due_date: str
+    class_id: str

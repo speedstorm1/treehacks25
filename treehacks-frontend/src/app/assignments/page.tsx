@@ -14,6 +14,7 @@ import { Upload } from "lucide-react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useClass } from "../context/ClassContext"
 
 interface Assignment {
   id: string;
@@ -28,6 +29,7 @@ const formSchema = z.object({
 })
 
 export default function Assignments() {
+  const { classId } = useClass()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -52,13 +54,15 @@ export default function Assignments() {
         return
       }
 
+      const updatedValues = { ...values, class_id: classId };
+
       setIsSubmitting(true)
       const response = await fetch('http://localhost:8000/assignment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(updatedValues),
       })
       if (!response.ok) throw new Error('Failed to create assignment')
       
@@ -78,7 +82,7 @@ export default function Assignments() {
       }
 
       // Refresh assignments list
-      const updatedResponse = await fetch('http://localhost:8000/assignment')
+      const updatedResponse = await fetch(`http://localhost:8000/assignment?class_id=${classId}`)
       if (!updatedResponse.ok) throw new Error('Failed to fetch assignments')
       const updatedData = await updatedResponse.json()
       setAssignments(updatedData)
@@ -102,7 +106,7 @@ export default function Assignments() {
       if (!response.ok) throw new Error('Failed to run NLP processing');
       
       // Refresh the assignments list
-      const updatedResponse = await fetch('http://localhost:8000/assignment');
+      const updatedResponse = await fetch(`http://localhost:8000/assignment?class_id=${classId}`);
       if (!updatedResponse.ok) throw new Error('Failed to fetch homework');
       const updatedData = await updatedResponse.json();
       setAssignments(updatedData);
@@ -127,7 +131,7 @@ export default function Assignments() {
       if (!response.ok) throw new Error('Failed to upload PDF')
       
       // Optionally refresh the assignments list if needed
-      const updatedResponse = await fetch('http://localhost:8000/assignment')
+      const updatedResponse = await fetch(`http://localhost:8000/assignment?class_id=${classId}`)
       if (!updatedResponse.ok) throw new Error('Failed to fetch assignments')
       const updatedData = await updatedResponse.json()
       setAssignments(updatedData)
@@ -141,7 +145,7 @@ export default function Assignments() {
   useEffect(() => {
     async function fetchAssignments() {
       try {
-        const response = await fetch('http://localhost:8000/assignment')
+        const response = await fetch(`http://localhost:8000/assignment?class_id=${classId}`)
         if (!response.ok) throw new Error('Failed to fetch homework')
         const data = await response.json()
         setAssignments(data)

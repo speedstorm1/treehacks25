@@ -344,9 +344,9 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
         )
 
 @app.get("/assignment", response_model=list[AssignmentResponse])
-async def list_assignment():
+async def list_assignment(class_id: str):
     try:
-        response = supabase.table("assignment").select("*").execute()
+        response = supabase.table("assignment").select("*").eq("class_id", class_id).execute()
         return response.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -536,7 +536,8 @@ async def create_assignment(assignment: AssignmentCreate):
         
         response = supabase.table("assignment").insert({
             "name": assignment.name,
-            "due_date": date_str
+            "due_date": date_str,
+            "class_id": assignment.class_id
         }).execute()
         
         if not response.data:
