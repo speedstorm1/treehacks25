@@ -33,7 +33,7 @@ export function Sidebar() {
   const SidebarItems = (
     <>
       <SidebarHeader>
-        <Link href="/home" className="hover:opacity-80">
+        <Link href="/home" className="hover:opacity-80 pl-2">
           <h2 className="text-xl font-bold">Teacher's Pet</h2>
         </Link>
       </SidebarHeader>
@@ -41,7 +41,7 @@ export function Sidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname.startsWith("/assignments")}>
-              <Link href="/assignments" className="text-base">
+              <Link href="/assignments" className="text-base pl-4">
                 <BookOpen className="mr-2 h-5 w-5" />
                 <span>Assignments</span>
               </Link>
@@ -49,7 +49,7 @@ export function Sidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname.startsWith("/lectures")}>
-              <Link href="/lectures" className="text-base">
+              <Link href="/lectures" className="text-base pl-4">
                 <Video className="mr-2 h-5 w-5" />
                 <span>Lectures</span>
               </Link>
@@ -57,7 +57,7 @@ export function Sidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/sessions"}>
-              <Link href="/sessions" className="text-base">
+              <Link href="/sessions" className="text-base pl-4">
                 <BookOpen className="mr-2 h-5 w-5" />
                 <span>Learning Checks</span>
               </Link>
@@ -65,7 +65,7 @@ export function Sidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/profile"}>
-              <Link href="/profile" className="text-base">
+              <Link href="/profile" className="text-base pl-4">
                 <User className="mr-2 h-5 w-5" />
                 <span>Profile</span>
               </Link>
@@ -73,7 +73,7 @@ export function Sidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === "/announcements"}>
-              <Link href="/announcements" className="text-base">
+              <Link href="/announcements" className="text-base pl-4">
                 <Bell className="mr-2 h-5 w-5" />
                 <span>Announcements</span>
               </Link>
@@ -83,7 +83,7 @@ export function Sidebar() {
         <div className="mt-auto py-4 px-3">
           <Button 
             variant="outline" 
-            className="w-full justify-start text-base"
+            className="w-full justify-start pl-4 text-base"
             onClick={handleExitClass}
           >
             <LogOut className="mr-2 h-5 w-5" />
