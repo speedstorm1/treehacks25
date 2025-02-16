@@ -15,6 +15,8 @@ from slide_utils import map_slides_to_video
 from question_gen import generate_questions, save_questions
 from llm_utils import extract_topics_from_syllabus
 import requests
+import io
+from PyPDF2 import PdfReader
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -330,27 +332,53 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
         )
 
 @app.get("/api/topics")
-async def get_topics():
-    result = supabase.table('topic').select('*').execute()
-    return result.data or []
+async def get_topics(class_id: str):
+    result = supabase.table('topics').select('*').eq('class_id', class_id).execute()
+    return result.data
 
-@app.patch("/api/topic/modify/{topic_id}")
+@app.put("/api/topics/{topic_id}")
 async def modify_topic(topic_id: str, topic: TopicUpdate):
-    result = supabase.table('topic').update({"title": topic.title}).eq('id', topic_id).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Topic not found")
-    
-    return result.data[0]
+    try:
+        result = supabase.table('topics').update({
+            'title': topic.title,
+            'class_id': topic.class_id
+        }).eq('id', topic_id).execute()
+        return result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/topic/add")
+@app.post("/api/topics")
 async def add_topic(topic: TopicUpdate):
-    result = supabase.table('topic').insert({"title": topic.title, "mastery_level": 0}).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=500, detail="Failed to add topic")
-    
-    return result.data[0]
+    try:
+        result = supabase.table('topics').insert({
+            'title': topic.title,
+            'class_id': topic.class_id
+        }).execute()
+        return result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/topic/generate")
+async def generate_topic(syllabus: Syllabus):
+    try:
+        # Download and extract text from the syllabus PDF
+        response = requests.get(syllabus.syllabus_url)
+        pdf_content = response.content
+        text_content = extract_text_from_pdf(pdf_content)
+
+        # Extract topics using OpenAI
+        topics = extract_topics_from_syllabus(text_content)
+        
+        # Insert topics into the database
+        for topic in topics:
+            supabase.table('topics').insert({
+                'title': topic,
+                'class_id': syllabus.class_id
+            }).execute()
+            
+        return {"message": "Topics generated successfully", "topics": topics}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/topic/delete/{topic_id}")
 async def delete_topic(topic_id: str):
@@ -361,47 +389,29 @@ async def delete_topic(topic_id: str):
     
     return result.data[0]
 
-@app.post("/api/topic/generate")
-async def generate_topic(syllabus: Syllabus):
+def extract_text_from_pdf(pdf_content: bytes) -> str:
+    """
+    Extract text content from PDF bytes.
+    """
     try:
-        # For now, we'll use a simple GET request to fetch the syllabus content
-        # In production, you'd want to handle this more securely
-        response = requests.get(syllabus.syllabus_url)
-        syllabus_text = response.text
+        # Create PDF reader object
+        pdf_file = io.BytesIO(pdf_content)
+        pdf_reader = PdfReader(pdf_file)
         
-        # Extract topics using OpenAI
-        topics = extract_topics_from_syllabus(syllabus_text)
-        
-        # Store topics in Supabase
-        for topic in topics:
-            result = supabase.table('topic').insert({
-                "title": topic,
-                "mastery_level": 0
-            }).execute()
+        # Extract text from all pages
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
             
-            if not result.data:
-                print(f"Failed to insert topic: {topic}")
+        # Clean up the text
+        text = text.strip()
+        # Remove multiple newlines
+        text = "\n".join(line.strip() for line in text.split("\n") if line.strip())
         
-        return {"message": f"Generated and stored {len(topics)} topics", "topics": topics}
-        
+        return text
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generating topics: {str(e)}"
-        )
-
-#close a session given the session id
-@app.patch("/api/sessions/{short_id}/close")
-async def close_session(short_id: str):
-    # Convert to uppercase to make it case-insensitive
-    short_id = short_id.upper()
-    
-    result = supabase.table('sessions').update({'active': False}).eq('short_id', short_id).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return result.data[0]
+        print(f"Error extracting text from PDF: {str(e)}")
+        raise ValueError("Failed to extract text from PDF") from e
 
 #get all questions for a session given the session id
 @app.get("/api/sessions/questions/{short_id}")

@@ -20,7 +20,7 @@ class TranscribeRequest(BaseModel):
 
 class TopicUpdate(BaseModel):
     title: str
-
+    class_id: str
 
 class SessionCreate(BaseModel):
     title: str
@@ -39,3 +39,4 @@ class ResponseCreate(BaseModel):
 
 class Syllabus(BaseModel):
     syllabus_url: str
+    class_id: str
