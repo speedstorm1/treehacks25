@@ -24,7 +24,7 @@ export default function Profile() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Profile", href: "/profile" },
           ]}
         />

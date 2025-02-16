@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useClass } from "../../context/ClassContext"
 
 export default function AddLecture() {
   const router = useRouter()
+  const { classId } = useClass()
   const [name, setName] = useState("")
   const [slides, setSlides] = useState("")
   const [lectureVideo, setLectureVideo] = useState("")
@@ -17,6 +19,11 @@ export default function AddLecture() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!classId) {
+      alert('Please select a class first')
+      return
+    }
+    
     setIsSubmitting(true)
 
     try {
@@ -28,7 +35,8 @@ export default function AddLecture() {
         body: JSON.stringify({
           name,
           slides,
-          lecture_video: lectureVideo
+          lecture_video: lectureVideo,
+          class_id: classId
         })
       })
 
@@ -39,6 +47,7 @@ export default function AddLecture() {
       router.push('/lectures')
     } catch (error) {
       console.error('Error creating lecture:', error)
+      alert('Error creating lecture: ' + error)
       setIsSubmitting(false)
     }
   }
@@ -48,18 +57,16 @@ export default function AddLecture() {
       <div className="max-w-2xl mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
-            { label: "New Lecture", href: "/lectures/add" },
+            { label: "Add Lecture", href: "/lectures/add" },
           ]}
         />
 
         <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">Create New Lecture</CardTitle>
-            <CardDescription>
-              Add a new lecture with video and slides
-            </CardDescription>
+          <CardHeader>
+            <CardTitle>Add New Lecture</CardTitle>
+            <CardDescription>Create a new lecture by providing the required information</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -67,50 +74,35 @@ export default function AddLecture() {
                 <Label htmlFor="name">Lecture Name</Label>
                 <Input
                   id="name"
-                  placeholder="Enter lecture name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="slides">Slides URL (Optional)</Label>
+                <Label htmlFor="slides">Slides URL (optional)</Label>
                 <Input
                   id="slides"
-                  type="url"
-                  placeholder="Enter slides URL"
                   value={slides}
                   onChange={(e) => setSlides(e.target.value)}
+                  placeholder="https://..."
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lectureVideo">Lecture Video URL (Optional)</Label>
+                <Label htmlFor="video">Video URL (optional)</Label>
                 <Input
-                  id="lectureVideo"
-                  type="url"
-                  placeholder="Enter lecture video URL"
+                  id="video"
                   value={lectureVideo}
                   onChange={(e) => setLectureVideo(e.target.value)}
+                  placeholder="https://..."
                 />
               </div>
 
-              <div className="flex gap-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !name}
-                >
-                  {isSubmitting ? "Creating..." : "Create Lecture"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push('/lectures')}
-                >
-                  Cancel
-                </Button>
-              </div>
+              <Button type="submit" className="w-full" disabled={isSubmitting || !classId}>
+                {isSubmitting ? "Creating..." : "Create Lecture"}
+              </Button>
             </form>
           </CardContent>
         </Card>

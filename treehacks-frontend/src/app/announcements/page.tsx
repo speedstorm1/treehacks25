@@ -58,7 +58,7 @@ export default function Announcements() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: "Home", href: "/home" },
             { label: "Announcements", href: "/announcements" },
           ]}
         />

@@ -19,31 +19,47 @@ interface Props {
   onTimeUpdate?: (time: number) => void
 }
 
+function formatTimestamp(timestamp: number): string {
+  const minutes = Math.floor(timestamp / 60)
+  const seconds = Math.floor(timestamp % 60)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 export function LectureContent({ lecture, onTimeUpdate }: Props) {
   const [currentTime, setCurrentTime] = useState(0)
-  const [activeTab, setActiveTab] = useState<'video' | 'slides'>('video')
+  const [activeTab, setActiveTab] = useState<'video' | 'slides'>(
+    lecture.lecture_video ? 'video' : 'slides'
+  )
 
   const handleTimeUpdate = useCallback((time: number) => {
     setCurrentTime(time)
     onTimeUpdate?.(time)
   }, [onTimeUpdate])
 
+  const showTabs = lecture.lecture_video && lecture.slides
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        <Button
-          variant={activeTab === 'video' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('video')}
-        >
-          Video
-        </Button>
-        <Button
-          variant={activeTab === 'slides' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('slides')}
-        >
-          Slides
-        </Button>
-      </div>
+      {showTabs && (
+        <div className="flex gap-2">
+          <Button
+            variant={activeTab === 'video' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('video')}
+            disabled={!lecture.lecture_video}
+          >
+            <Video className="mr-2 h-4 w-4" />
+            Video
+          </Button>
+          <Button
+            variant={activeTab === 'slides' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('slides')}
+            disabled={!lecture.slides}
+          >
+            <Presentation className="mr-2 h-4 w-4" />
+            Slides
+          </Button>
+        </div>
+      )}
 
       <div className="mt-4">
         {activeTab === 'video' ? (
@@ -55,14 +71,16 @@ export function LectureContent({ lecture, onTimeUpdate }: Props) {
                   Lecture Video
                 </CardTitle>
                 <CardDescription>
-                  Current Time: {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
+                  Current Time: {formatTimestamp(currentTime)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <VideoPlayer 
-                  url={lecture.lecture_video} 
-                  onTimeUpdate={handleTimeUpdate}
-                />
+                <div className="h-[400px]">
+                  <VideoPlayer 
+                    url={lecture.lecture_video} 
+                    onTimeUpdate={handleTimeUpdate}
+                  />
+                </div>
               </CardContent>
             </Card>
           ) : (
@@ -82,7 +100,9 @@ export function LectureContent({ lecture, onTimeUpdate }: Props) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PDFViewer url={lecture.slides} />
+                <div className="h-[400px]">
+                  <PDFViewer url={lecture.slides} />
+                </div>
               </CardContent>
             </Card>
           ) : (
