@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useEffect, useState } from "react"
 import { CloseSessionButton } from "@/components/close-session-button"
 import { createClient } from '@supabase/supabase-js'
+import { useClass } from "@/app/context/ClassContext"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -72,6 +73,7 @@ export default function SessionInsights() {
   const [responseCount, setResponseCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
+  const { classCode}  = useClass()
 
   // Fetch session details and initial response count
   useEffect(() => {
@@ -198,7 +200,7 @@ export default function SessionInsights() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             ...(session.lecture 
               ? [{ label: session.lecture.name, href: `/lectures/${session.lecture.id}` }]

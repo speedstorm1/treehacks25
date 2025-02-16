@@ -44,7 +44,7 @@ async function getSessions(lectureId: string) {
 export default function LecturePage() {
   const params = useParams()
   const lectureId = params?.id as string
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
   const [lecture, setLecture] = useState<Lecture | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -86,7 +86,7 @@ export default function LecturePage() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             { label: lecture.name, href: `/lectures/${lecture.id}` },
           ]}

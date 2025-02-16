@@ -19,7 +19,7 @@ interface Lecture {
 
 export default function Lectures() {
   const [lectures, setLectures] = useState<Lecture[]>([])
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
 
   useEffect(() => {
     const fetchLectures = async () => {
@@ -45,7 +45,7 @@ export default function Lectures() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
           ]}
         />

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { useClass } from "@/app/context/ClassContext"
 
 interface Announcement {
   id: number
@@ -36,6 +37,7 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState(initialAnnouncements)
   const [newTitle, setNewTitle] = useState("")
   const [newContent, setNewContent] = useState("")
+  const {classCode} = useClass()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +60,7 @@ export default function Announcements() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Announcements", href: "/announcements" },
           ]}
         />

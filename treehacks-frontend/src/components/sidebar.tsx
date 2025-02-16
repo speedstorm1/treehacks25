@@ -18,7 +18,7 @@ import { useClass } from "@/app/context/ClassContext"
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { setClassId } = useClass()
+  const { setClass } = useClass()
 
   // Hide the sidebar if the current route is professor-setup or student path
   if (pathname === '/' || pathname.startsWith('/student')) {
@@ -26,7 +26,7 @@ export function Sidebar() {
   }
 
   const handleExitClass = () => {
-    setClassId(null)
+    setClass(null, null)
     router.push('/')
   }
 

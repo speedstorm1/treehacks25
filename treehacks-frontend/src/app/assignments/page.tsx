@@ -14,8 +14,8 @@ import { Upload } from "lucide-react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useClass } from "../context/ClassContext"
 import { Badge } from "@/components/ui/badge"
+import { useClass } from "@/app/context/ClassContext"
 
 interface Assignment {
   id: string;
@@ -30,7 +30,7 @@ const formSchema = z.object({
 })
 
 export default function Assignments() {
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -166,7 +166,7 @@ export default function Assignments() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Assignments", href: "/assignments" },
           ]}
         />
@@ -210,8 +210,7 @@ export default function Assignments() {
                       </TableCell>
                       <TableCell className="text-lg px-4 py-2">{assignment.due_date}</TableCell>
                       <TableCell className="text-right px-4 py-2">
-                        {/* Add graded count here if available */}
-                        0
+                        {assignment.submissions}
                       </TableCell>
                       <TableCell className="text-right px-4 py-2">
                         <Button 

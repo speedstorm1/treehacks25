@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useClass } from "../../context/ClassContext"
+import { useClass } from "@/app/context/ClassContext"
 
 export default function AddLecture() {
   const router = useRouter()
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
   const [name, setName] = useState("")
   const [slides, setSlides] = useState("")
   const [lectureVideo, setLectureVideo] = useState("")
@@ -57,7 +57,7 @@ export default function AddLecture() {
       <div className="max-w-2xl mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Lectures", href: "/lectures" },
             { label: "Add Lecture", href: "/lectures/add" },
           ]}

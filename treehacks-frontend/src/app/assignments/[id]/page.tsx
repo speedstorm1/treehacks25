@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import ReactMarkdown from 'react-markdown'
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons"
+import { useClass } from "@/app/context/ClassContext"
 
 interface QuestionInsight {
   id: number
@@ -44,6 +45,7 @@ export default function AssignmentInsights() {
   const [questionInsights, setQuestionInsights] = useState<QuestionInsight[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { classCode } = useClass()
 
   // Memoize questionGroups to prevent infinite re-renders
   const questionGroups = useMemo(() => {
@@ -142,7 +144,7 @@ export default function AssignmentInsights() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Assignments", href: "/assignments" },
             { label: assignment.name, href: `/assignments/${assignment.id}` },
           ]}

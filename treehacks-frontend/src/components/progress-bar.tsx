@@ -17,7 +17,6 @@ export function ProgressBar({ value, label, color, tooltip }: ProgressBarProps) 
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>{label}</span>
-              <span style={{ color }}>{value}%</span>
             </div>
             <Progress
               value={value}
@@ -27,10 +26,9 @@ export function ProgressBar({ value, label, color, tooltip }: ProgressBarProps) 
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{tooltip || `${label}: ${value}% mastery`}</p>
+          <p style={{ color }}>{`${value}%`}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   )
 }
-

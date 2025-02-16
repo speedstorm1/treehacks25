@@ -23,6 +23,8 @@ class AssignmentResponse(BaseModel):
     name: str | None = None
     due_date: str | None = None
     created_at: str
+    submissions: int | None = None
+    class_id: str | None = None
 
 class QuestionData(BaseModel):
     id: int

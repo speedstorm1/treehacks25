@@ -45,7 +45,7 @@ type Session = {
 
 export default function Sessions() {
   const [sessions, setSessions] = useState<Session[]>([])
-  const { classId } = useClass()
+  const { classId, classCode } = useClass()
 
   const fetchSessions = async () => {
     try {
@@ -86,7 +86,7 @@ export default function Sessions() {
       <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
-            { label: "Home", href: "/home" },
+            { label: classCode || "Home", href: "/home" },
             { label: "Learning Checks", href : "/sessions" },
           ]}
         />
