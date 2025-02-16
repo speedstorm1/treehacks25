@@ -76,6 +76,15 @@ export default function AddSession() {
       if (!response.ok) throw new Error('Failed to create session')
 
       const data = await response.json()
+
+      await fetch(`http://localhost:8000/api/generate-questions?session_id=${data.id}&lecture_id=${lectureId}`,
+        {method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        }
+      )
+
       router.push(`/sessions/${data.short_id}`)
     } catch (error) {
       console.error('Error creating session:', error)
