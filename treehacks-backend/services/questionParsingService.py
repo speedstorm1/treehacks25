@@ -6,6 +6,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import io
+from topic_utils import categorize_question
 
 # Load environment variables and initialize clients
 load_dotenv()
@@ -134,16 +135,19 @@ async def parse_and_store_questions(assignment_id: int, pdf_bytes: bytes) -> Lis
             # Use LLM to categorize the question into multiple topics
             question["topic_ids"] = categorize_question(
                 question["text"],
+                "",
                 class_id
             )
             
+            # print(response.data[0])
             question_id = response.data[0]['id']
             for topic_id in question["topic_ids"]:
                 mapping_data = {
                     'question_id': question_id,
                     'topic_id': topic_id
                 }
-                mapping_response = supabase.table('assignment_question<>topic').insert(mapping_data).execute()
+                mapping_response = supabase.table('assignment_questions<>topic').insert(mapping_data).execute()
+
                 if not mapping_response or not mapping_response.data:
                     raise ValueError(f"Failed to create mapping for question {question_id} and topic {topic_id}")
                         
