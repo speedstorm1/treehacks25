@@ -434,25 +434,8 @@ async def add_topic(topic: TopicUpdate):
 @app.post("/api/topic/generate")
 async def generate_topic(syllabus: Syllabus):
     try:
-        # Extract the file ID from the Google Drive URL
-        file_id = None
-        if "drive.google.com" in syllabus.syllabus_url:
-            if "/file/d/" in syllabus.syllabus_url:
-                file_id = syllabus.syllabus_url.split("/file/d/")[1].split("/")[0]
-            elif "id=" in syllabus.syllabus_url:
-                file_id = syllabus.syllabus_url.split("id=")[1].split("&")[0]
-        
-        if not file_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid Google Drive URL. Please provide a valid sharing URL."
-            )
-            
-        # Get the direct download URL
-        download_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        
-        # Download the PDF content
-        response = requests.get(download_url)
+        # Download the PDF content directly from Supabase URL
+        response = requests.get(syllabus.syllabus_url)
         if not response.ok:
             raise HTTPException(
                 status_code=400,
@@ -461,8 +444,6 @@ async def generate_topic(syllabus: Syllabus):
             
         pdf_content = response.content
         text_content = extract_text_from_pdf(pdf_content)
-        # print(f"Extracted text content ({len(text_content)} chars)")
-        # print("First 500 chars:", text_content[:500])
 
         # Extract topics using OpenAI
         topics = extract_topics_from_syllabus(text_content)

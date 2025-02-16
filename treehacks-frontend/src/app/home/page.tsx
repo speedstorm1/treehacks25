@@ -11,6 +11,12 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Plus, Trash2, Upload } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useClass } from "../context/ClassContext"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Topic {
   id: string
@@ -117,9 +123,44 @@ export default function Home() {
   const uploadSyllabus = async (file: File) => {
     if (!file) return
 
-    console.log("Uploading file:", file)
+    try {
+      // Create a unique file name using timestamp
+      const timestamp = new Date().getTime()
+      const fileName = `${timestamp}_${file.name}`
 
-    return "https://drive.google.com/file/d/1_MsuLmYnfmwKFydFc9usab1mIk1AOQsK/view?usp=sharing"; // Using hardcoded Google Drive link
+      // Upload file to Supabase storage
+      const { data, error } = await supabase
+        .storage
+        .from('syllabi')
+        .upload(fileName, file)
+
+      if (error) {
+        console.error('Error uploading file:', error)
+        throw error
+      }
+
+      // Get the public URL using the path from upload response
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('syllabi')
+        .getPublicUrl(data.path)
+
+      // Update the class table with the syllabus URL
+      const { error: updateError } = await supabase
+        .from('class')
+        .update({ syllabus: publicUrl })
+        .eq('id', classId)
+
+      if (updateError) {
+        console.error('Error updating class:', updateError)
+        throw updateError
+      }
+
+      return publicUrl
+    } catch (error) {
+      console.error('Error in uploadSyllabus:', error)
+      throw error
+    }
   }
 
   const handleSyllabusUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
