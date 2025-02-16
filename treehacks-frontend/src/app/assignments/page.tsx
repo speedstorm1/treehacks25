@@ -1,36 +1,43 @@
+'use client'
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PlusCircle } from "lucide-react"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
 
-// This data would typically come from your backend
-const assignments = [
-  {
-    id: 1,
-    name: "Assignment 1",
-    deadline: "2023-05-15",
-    submissions: 25,
-    graded: 20,
-  },
-  {
-    id: 2,
-    name: "Assignment 2",
-    deadline: "2023-05-22",
-    submissions: 23,
-    graded: 18,
-  },
-  {
-    id: 3,
-    name: "Assignment 3",
-    deadline: "2023-05-29",
-    submissions: 24,
-    graded: 15,
-  },
-]
+interface Assignment {
+  id: string;
+  title: string;
+  due_date: string;
+  submissions?: number;
+  graded?: number;
+}
 
 export default function Assignments() {
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    async function fetchAssignments() {
+      try {
+        const response = await fetch('http://localhost:8000/assignment')
+        if (!response.ok) throw new Error('Failed to fetch homework')
+        const data = await response.json()
+        setAssignments(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAssignments()
+  }, [])
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error}</div>
   return (
     <div className="min-h-full p-8">
       <div className="max-w-[2000px] mx-auto space-y-8">
@@ -73,9 +80,7 @@ export default function Assignments() {
                           {assignment.name}
                         </Link>
                       </TableCell>
-                      <TableCell className="text-lg">{assignment.deadline}</TableCell>
-                      <TableCell className="text-right text-lg">{assignment.submissions}</TableCell>
-                      <TableCell className="text-right text-lg">{assignment.graded}</TableCell>
+                      <TableCell className="text-lg">{assignment.due_date}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

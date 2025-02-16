@@ -332,3 +332,41 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
             status_code=500,
             detail=f"Error generating questions: {str(e)}"
         )
+
+@app.get("/assignment", response_model=list[AssignmentResponse])
+async def list_assignment():
+    try:
+        response = supabase.table("assignment").select("*").execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/homework/{homework_id}", response_model=AssignmentDetailsResponse)
+async def get_homework_details(homework_id: int):
+    try:
+        # Get the base homework info
+        homework = supabase.table("student_homework").select("*").eq("id", homework_id).single().execute()
+        if not homework.data:
+            raise HTTPException(status_code=404, detail="Homework not found")
+            
+        # Get the questions for this homework
+        questions = supabase.table("homework_questions").select("*").eq("homework_id", homework_id).execute()
+        
+        # Get the error statistics for each question
+        questions_with_stats = []
+        for question in questions.data:
+            error_stats = supabase.table("question_errors").select("*").eq("question_id", question["id"]).execute()
+            questions_with_stats.append({
+                "id": question["id"],
+                "text": question["text"],
+                "errors": error_stats.data
+            })
+            
+        # Combine all data
+        return {
+            **homework.data,
+            "questions": questions_with_stats
+        }
+    except Exception as e:
+        print(f"Error in get_homework_details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
