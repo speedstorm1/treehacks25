@@ -51,6 +51,8 @@ class QuestionInsight(BaseModel):
     error_summary: str
     error_count: int
     created_at: str
+    problem_number: int
+    question_text: str
 
 class QuestionInsightsResponse(BaseModel):
     insights: list[QuestionInsight]

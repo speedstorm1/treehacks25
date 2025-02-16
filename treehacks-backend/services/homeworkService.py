@@ -76,12 +76,17 @@ def publish_question_extracted_insight(assignment_id: int):
     return "Question insights published successfully"
 
 def publish_homework_summary(assignment_id: int):
-    questions_response = supabase.table("assignment_question").select("id").eq("assignment_id", assignment_id).execute()
-    question_ids = [q["id"] for q in questions_response.data]
+    # Get questions with their problem numbers
+    questions_response = supabase.table("assignment_question").select("id,problem_number").eq("assignment_id", assignment_id).execute()
+    question_map = {q["id"]: q["problem_number"] for q in questions_response.data}
+    question_ids = list(question_map.keys())
     
     all_insights = []
     for qid in question_ids:
         insights_response = supabase.table("homework_question_extracted_insight").select("*").eq("question_id", qid).execute()
+        # Add problem_number to each insight
+        for insight in insights_response.data:
+            insight["problem_number"] = question_map[qid]
         all_insights.extend(insights_response.data)
     
     if not all_insights:
@@ -89,7 +94,7 @@ def publish_homework_summary(assignment_id: int):
     
     insights_text = ""
     for insight in all_insights:
-        insights_text += f"Question {insight['question_id']}: {insight['error_summary']} (Found in {insight['error_count']} responses)\n"
+        insights_text += f"Problem {insight['problem_number']}: {insight['error_summary']} (Found in {insight['error_count']} responses)\n"
     
     prompt = f"""
     Analyze these question-level insights from a homework assignment and create a comprehensive summary:

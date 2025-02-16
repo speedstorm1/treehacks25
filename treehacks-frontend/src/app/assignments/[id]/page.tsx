@@ -13,6 +13,8 @@ interface QuestionInsight {
   error_summary: string
   error_count: number
   created_at: string
+  problem_number: number
+  question_text: string
 }
 
 interface AssignmentInsight {
@@ -74,11 +76,13 @@ export default function AssignmentInsights() {
     const group = groups[insight.question_id] || []
     group.push({
       name: insight.error_summary,
-      value: insight.error_count
+      value: insight.error_count,
+      problem_number: insight.problem_number,
+      question_text: insight.question_text
     })
     groups[insight.question_id] = group
     return groups
-  }, {} as Record<number, { name: string; value: number }[]>)
+  }, {} as Record<number, { name: string; value: number; problem_number: number; question_text: string }[]>)
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
@@ -130,11 +134,14 @@ export default function AssignmentInsights() {
           {Object.entries(questionGroups).map(([questionId, errors]) => (
             <Card key={questionId}>
               <CardHeader className="p-8">
-                <CardTitle className="text-xl">Question {questionId}</CardTitle>
+                <CardTitle className="text-xl">Problem {errors[0]?.problem_number}</CardTitle>
+                <CardDescription className="mt-2 text-gray-600">
+                  {errors[0]?.question_text}
+                </CardDescription>
               </CardHeader>
               <CardContent className="p-8 pt-0">
                 <div className="h-[300px]">
-                  <CustomPieChart data={errors} />
+                  <CustomPieChart data={errors.map(e => ({ name: e.name, value: e.value }))} />
                 </div>
                 <div className="mt-4">
                   {errors.map((error, index) => (
