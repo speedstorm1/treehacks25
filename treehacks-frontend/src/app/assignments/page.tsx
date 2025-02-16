@@ -10,7 +10,7 @@ import { useEffect, useState } from "react"
 
 interface Assignment {
   id: string;
-  title: string;
+  name: string;
   due_date: string;
   submissions?: number;
   graded?: number;
