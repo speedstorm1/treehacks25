@@ -5,6 +5,7 @@ import json
 from openai import OpenAI
 from dotenv import load_dotenv
 from supabase import create_client, Client
+import io
 
 # Load environment variables and initialize clients
 load_dotenv()
@@ -13,10 +14,21 @@ key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extract text content from a PDF file."""
+# def extract_text_from_pdf(pdf_path: str) -> str:
+#     """Extract text content from a PDF file."""
+#     try:
+#         reader = PdfReader(pdf_path)
+#         text = ""
+#         for page in reader.pages:
+#             text += page.extract_text()
+#         return text
+#     except Exception as e:
+#         raise Exception(f"Error extracting text from PDF: {str(e)}")
+
+def extract_text_from_pdf_bytes(pdf_bytes: bytes) -> str:
+    """Extract text content from PDF bytes."""
     try:
-        reader = PdfReader(pdf_path)
+        reader = PdfReader(io.BytesIO(pdf_bytes))
         text = ""
         for page in reader.pages:
             text += page.extract_text()
@@ -82,20 +94,20 @@ async def split_into_questions(text: str) -> List[Dict[str, str]]:
     except Exception as e:
         raise Exception(f"Error splitting text into questions: {str(e)}")
 
-async def parse_and_store_questions(assignment_id: int, pdf_path: str) -> List[Dict]:
+async def parse_and_store_questions(assignment_id: int, pdf_bytes: bytes) -> List[Dict]:
     """
-    Parse questions from a PDF and store them in the homework_question table.
+    Parse questions from PDF bytes and store them in the homework_question table.
     
     Args:
         assignment_id: ID of the assignment these questions belong to
-        pdf_path: Path to the PDF file containing questions
+        pdf_bytes: Bytes of the PDF file containing questions
         
     Returns:
         List of stored questions with their IDs
     """
     try:
         # Extract text from PDF
-        text = extract_text_from_pdf(pdf_path)
+        text = extract_text_from_pdf_bytes(pdf_bytes)
         print('extracted text')
         
         # Split into questions

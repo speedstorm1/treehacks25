@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
+import { Upload } from "lucide-react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -32,6 +33,7 @@ export default function Assignments() {
   const [error, setError] = useState<string | null>(null)
   const [processingNLP, setProcessingNLP] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,6 +87,31 @@ export default function Assignments() {
       setProcessingNLP(null);
     }
   };
+
+  const handleFileUpload = async (assignmentId: string, file: File) => {
+    try {
+      setUploading(assignmentId)
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`http://localhost:8000/assignment/${assignmentId}/upload-pdf`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error('Failed to upload PDF')
+      
+      // Optionally refresh the assignments list if needed
+      const updatedResponse = await fetch('http://localhost:8000/assignment')
+      if (!updatedResponse.ok) throw new Error('Failed to fetch assignments')
+      const updatedData = await updatedResponse.json()
+      setAssignments(updatedData)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred')
+    } finally {
+      setUploading(null)
+    }
+  }
 
   useEffect(() => {
     async function fetchAssignments() {
@@ -158,6 +185,26 @@ export default function Assignments() {
                           disabled={processingNLP === assignment.id}
                         >
                           {processingNLP === assignment.id ? 'Processing...' : 'Get Insights'}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <input
+                          type="file"
+                          id={`file-upload-${assignment.id}`}
+                          className="hidden"
+                          accept=".pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(assignment.id, file)
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => document.getElementById(`file-upload-${assignment.id}`)?.click()}
+                          disabled={uploading === assignment.id}
+                        >
+                          <Upload className={`h-5 w-5 ${uploading === assignment.id ? 'animate-pulse' : ''}`} />
                         </Button>
                       </TableCell>
                     </TableRow>

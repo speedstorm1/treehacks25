@@ -20,6 +20,9 @@ import requests
 import io
 from PyPDF2 import PdfReader
 from datetime import datetime
+from fastapi import File, UploadFile
+from services.questionParsingService import parse_and_store_questions
+
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -405,6 +408,24 @@ async def run_homework_nlp(assignment_id: int):
     except Exception as e:
         print(f"Error in run_homework_nlp: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/assignment/{assignment_id}/upload-pdf")
+async def upload_assignment_pdf(assignment_id: int, file: UploadFile = File(...)):
+    try:
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+            
+        # Read the PDF file
+        pdf_content = await file.read()
+        
+        # Parse and store questions
+        questions = await parse_and_store_questions(assignment_id, pdf_content)
+        
+        return {"message": "PDF processed successfully", "questions": questions}
+    except Exception as e:
+        print(f"Error processing PDF: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/topics")
 async def get_topics(class_id: str):
     result = supabase.table('topic').select('*').eq('class_id', class_id).execute()
