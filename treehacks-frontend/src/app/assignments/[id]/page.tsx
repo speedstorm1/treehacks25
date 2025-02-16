@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { CustomPieChart, COLORS } from "@/components/pie-chart"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,10 @@ interface QuestionInsight {
   question_text: string
   total_submission: number
   correct_submission: number
+  topics?: Array<{
+    id: string
+    title: string
+  }>
 }
 
 interface AssignmentInsight {
@@ -41,6 +45,44 @@ export default function AssignmentInsights() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Memoize questionGroups to prevent infinite re-renders
+  const questionGroups = useMemo(() => {
+    return questionInsights.reduce((groups, insight) => {
+      const group = groups[insight.question_id] || []
+      group.push({
+        name: insight.error_summary,
+        value: insight.error_count,
+        problem_number: insight.problem_number,
+        question_text: insight.question_text,
+        total_submission: insight.total_submission,
+        correct_submission: insight.correct_submission,
+        topics: insight.topics
+      })
+      groups[insight.question_id] = group
+      return groups
+    }, {} as Record<number, { 
+      name: string
+      value: number
+      problem_number: number
+      question_text: string
+      total_submission: number
+      correct_submission: number 
+      topics?: Array<{
+        id: string
+        title: string
+      }>
+    }[]>)
+  }, [questionInsights])
+
+  // Memoize sorted groups to prevent re-renders
+  const sortedQuestionGroups = useMemo(() => {
+    return Object.entries(questionGroups).sort(([, a], [, b]) => {
+      const aRate = a[0].correct_submission / (a[0].total_submission || 1)
+      const bRate = b[0].correct_submission / (b[0].total_submission || 1)
+      return aRate - bRate
+    })
+  }, [questionGroups])
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -59,11 +101,27 @@ export default function AssignmentInsights() {
           setAssignmentInsight(insightData)
         }
 
-        // Fetch question insights
+        // Fetch question insights and topics in a single request
         const questionInsightsRes = await fetch(`http://localhost:8000/assignment/${params.id}/question-insights`)
         if (questionInsightsRes.ok) {
           const questionInsightsData = await questionInsightsRes.json()
-          setQuestionInsights(questionInsightsData.insights)
+          
+          // Fetch all topics in parallel
+          const uniqueQuestionIds = [...new Set(questionInsightsData.insights.map((i: QuestionInsight) => i.question_id))]
+          const topicsPromises = uniqueQuestionIds.map(qid => 
+            fetch(`http://localhost:8000/api/assignment_questions/${qid}/topics`)
+              .then(res => res.ok ? res.json() : [])
+          )
+          const allTopics = await Promise.all(topicsPromises)
+          const topicsMap = Object.fromEntries(uniqueQuestionIds.map((qid, i) => [qid, allTopics[i]]))
+          
+          // Attach topics to insights
+          const insights = questionInsightsData.insights.map((insight: QuestionInsight) => ({
+            ...insight,
+            topics: topicsMap[insight.question_id] || []
+          }))
+          
+          setQuestionInsights(insights)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred')
@@ -74,34 +132,6 @@ export default function AssignmentInsights() {
 
     fetchData()
   }, [params.id])
-
-  const questionGroups = questionInsights.reduce((groups, insight) => {
-    const group = groups[insight.question_id] || []
-    group.push({
-      name: insight.error_summary,
-      value: insight.error_count,
-      problem_number: insight.problem_number,
-      question_text: insight.question_text,
-      total_submission: insight.total_submission,
-      correct_submission: insight.correct_submission
-    })
-    groups[insight.question_id] = group
-    return groups
-  }, {} as Record<number, { 
-    name: string
-    value: number
-    problem_number: number
-    question_text: string
-    total_submission: number
-    correct_submission: number 
-  }[]>)
-
-  // Sort questions by correctness rate (ascending)
-  const sortedQuestionGroups = Object.entries(questionGroups).sort(([, a], [, b]) => {
-    const aRate = a[0].correct_submission / (a[0].total_submission || 1)
-    const bRate = b[0].correct_submission / (b[0].total_submission || 1)
-    return aRate - bRate
-  })
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
@@ -158,16 +188,30 @@ export default function AssignmentInsights() {
               <Card key={questionId} className={isUrgent ? "border-red-400" : ""}>
                 <CardHeader className="p-8">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        Problem {errors[0]?.problem_number}
-                        {isUrgent && (
-                          <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-2 text-gray-600">
-                        {errors[0]?.question_text}
-                      </CardDescription>
+                    <div className="space-y-3">
+                      {errors[0]?.topics && errors[0].topics.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {errors[0].topics.map((topic) => (
+                            <span
+                              key={topic.id}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                            >
+                              {topic.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          Problem {errors[0]?.problem_number}
+                          {isUrgent && (
+                            <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                          )}
+                        </CardTitle>
+                        <CardDescription className="mt-2 text-gray-600">
+                          {errors[0]?.question_text}
+                        </CardDescription>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium">

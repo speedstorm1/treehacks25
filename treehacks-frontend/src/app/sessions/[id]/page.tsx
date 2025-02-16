@@ -19,6 +19,10 @@ interface Question {
     name: string
     value: number
   }>
+  topics?: Array<{
+    id: string
+    title: string
+  }>
 }
 
 interface Session {
@@ -92,6 +96,15 @@ export default function SessionInsights() {
         // Add mock data for questions if session is not active
         if (!data.active) {
           data.questions = generateMockQuestions(data.num_questions)
+          
+          // Fetch topics for each question
+          for (const question of data.questions) {
+            const topicsResponse = await fetch(`http://localhost:8000/api/session_questions/${question.id}/topics`)
+            if (topicsResponse.ok) {
+              const topics = await topicsResponse.json()
+              question.topics = topics
+            }
+          }
         }
         
         setSession(data)
@@ -281,8 +294,24 @@ export default function SessionInsights() {
               {session.questions?.map((question) => (
                 <Card key={question.id}>
                   <CardHeader className="p-8">
-                    <CardTitle className="text-2xl">{question.text}</CardTitle>
-                    <CardDescription className="text-base">Response distribution</CardDescription>
+                    <div className="space-y-4">
+                      {question.topics && question.topics.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {question.topics.map((topic) => (
+                            <span
+                              key={topic.id}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
+                            >
+                              {topic.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div>
+                        <CardTitle className="text-2xl">{question.text}</CardTitle>
+                        <CardDescription className="text-base">Response distribution</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="p-8 pt-0">
                     <div className="h-[300px]">
