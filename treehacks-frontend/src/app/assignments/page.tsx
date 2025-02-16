@@ -34,6 +34,8 @@ export default function Assignments() {
   const [processingNLP, setProcessingNLP] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,6 +47,12 @@ export default function Assignments() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      if (!selectedFile) {
+        setError("Please upload a PDF file with questions")
+        return
+      }
+
+      setIsSubmitting(true)
       const response = await fetch('http://localhost:8000/assignment', {
         method: 'POST',
         headers: {
@@ -53,7 +61,21 @@ export default function Assignments() {
         body: JSON.stringify(values),
       })
       if (!response.ok) throw new Error('Failed to create assignment')
+      
+      const newAssignment = await response.json()
 
+      // If a file was selected, upload it
+      if (selectedFile) {
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+
+        const uploadResponse = await fetch(`http://localhost:8000/assignment/${newAssignment.id}/upload-pdf`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!uploadResponse.ok) throw new Error('Failed to upload PDF')
+      }
 
       // Refresh assignments list
       const updatedResponse = await fetch('http://localhost:8000/assignment')
@@ -62,8 +84,11 @@ export default function Assignments() {
       setAssignments(updatedData)
       setOpen(false)
       form.reset()
+      setSelectedFile(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -187,26 +212,6 @@ export default function Assignments() {
                           {processingNLP === assignment.id ? 'Processing...' : 'Get Insights'}
                         </Button>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <input
-                          type="file"
-                          id={`file-upload-${assignment.id}`}
-                          className="hidden"
-                          accept=".pdf"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleFileUpload(assignment.id, file)
-                          }}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => document.getElementById(`file-upload-${assignment.id}`)?.click()}
-                          disabled={uploading === assignment.id}
-                        >
-                          <Upload className={`h-5 w-5 ${uploading === assignment.id ? 'animate-pulse' : ''}`} />
-                        </Button>
-                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -246,7 +251,36 @@ export default function Assignments() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">Add Assignment</Button>
+              <FormItem>
+                <FormLabel>Upload Assignment PDF</FormLabel>
+                <FormControl>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="file"
+                      id="pdf-upload"
+                      className="hidden"
+                      accept=".pdf"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full flex items-center justify-center"
+                      onClick={() => document.getElementById('pdf-upload')?.click()}
+                    >
+                      <Upload className="mr-2 h-5 w-5" />
+                      {selectedFile ? selectedFile.name : "Upload PDF"}
+                    </Button>
+                  </div>
+                </FormControl>
+              </FormItem>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isSubmitting || !selectedFile}
+              >
+                {isSubmitting ? "Adding..." : "Add Assignment"}
+              </Button>
             </form>
           </Form>
         </DialogContent>
