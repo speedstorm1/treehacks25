@@ -60,7 +60,7 @@ def publish_session_question_extracted_insight(short_id: int):
         
         try:
             response_content = json.loads(response.choices[0].message.content)
-            misconceptions = response_content.get("misconceptions", [])
+            misconceptions = [response_content.get("misconceptions", [])[0]]
             print(f"Response for question {question_id}: ", response_content)
             print(f"Extracted misconceptions: ", misconceptions)
             
