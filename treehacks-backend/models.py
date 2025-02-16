@@ -38,3 +38,19 @@ class AssignmentDetailsResponse(BaseModel):
     created_at: str
     summary: str
     questions: list[QuestionData]
+
+class AssignmentInsightResponse(BaseModel):
+    id: int
+    assignment_id: int
+    summary: str
+    created_at: str
+
+class QuestionInsight(BaseModel):
+    id: int
+    question_id: int
+    error_summary: str
+    error_count: int
+    created_at: str
+
+class QuestionInsightsResponse(BaseModel):
+    insights: list[QuestionInsight]

@@ -343,32 +343,44 @@ async def list_assignment():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/homework/{homework_id}", response_model=AssignmentDetailsResponse)
-async def get_homework_details(homework_id: int):
+@app.get("/assignment/{assignment_id}", response_model=AssignmentResponse)
+async def get_assignment_details(assignment_id: int):
     try:
-        # Get the base homework info
-        homework = supabase.table("student_homework").select("*").eq("id", homework_id).single().execute()
-        if not homework.data:
-            raise HTTPException(status_code=404, detail="Homework not found")
-            
-        # Get the questions for this homework
-        questions = supabase.table("homework_questions").select("*").eq("homework_id", homework_id).execute()
-        
-        # Get the error statistics for each question
-        questions_with_stats = []
-        for question in questions.data:
-            error_stats = supabase.table("question_errors").select("*").eq("question_id", question["id"]).execute()
-            questions_with_stats.append({
-                "id": question["id"],
-                "text": question["text"],
-                "errors": error_stats.data
-            })
-            
-        # Combine all data
-        return {
-            **homework.data,
-            "questions": questions_with_stats
-        }
+        response = supabase.table("assignment").select("*").eq("id", assignment_id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        return response.data
     except Exception as e:
-        print(f"Error in get_homework_details: {str(e)}")
+        print(f"Error in get_assignment_details: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/assignment/{assignment_id}/insight", response_model=AssignmentInsightResponse)
+async def get_assignment_insight(assignment_id: int):
+    try:
+        response = supabase.table("assignment_insight").select("*").eq("assignment_id", assignment_id).single().execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Assignment insight not found")
+        return response.data
+    except Exception as e:
+        print(f"Error in get_assignment_insight: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/assignment/{assignment_id}/question-insights", response_model=QuestionInsightsResponse)
+async def get_question_insights(assignment_id: int):
+    try:
+        # First get all questions for this assignment
+        questions = supabase.table("assignment_question").select("id").eq("assignment_id", assignment_id).execute()
+        if not questions.data:
+            return {"insights": []}
+            
+        # Get insights for all questions
+        question_ids = [q["id"] for q in questions.data]
+        insights = []
+        for qid in question_ids:
+            response = supabase.table("homework_question_extracted_insight").select("*").eq("question_id", qid).execute()
+            insights.extend(response.data)
+            
+        return {"insights": insights}
+    except Exception as e:
+        print(f"Error in get_question_insights: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
