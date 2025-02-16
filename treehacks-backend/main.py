@@ -632,3 +632,50 @@ async def close_session(short_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
     
     return result.data[0]
+
+@app.get("/api/session_questions/{question_id}/topics")
+async def get_question_topics(question_id: int):
+    try:
+        # Get topics for this question from the mapping table
+        topic_response = supabase.table('session_questions<>topic').select(
+            'topic_id'
+        ).eq('question_id', question_id).execute()
+        if not topic_response or not topic_response.data:
+            return []
+        # Get topic details for each topic_id
+        topic_ids = [t['topic_id'] for t in topic_response.data]
+        topics_response = supabase.table('topic').select(
+            'id,title'
+        ).in_('id', topic_ids).execute()
+        
+        if not topics_response or not topics_response.data:
+            return []
+            
+        return topics_response.data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/assignment_questions/{question_id}/topics")
+async def get_assignment_question_topics(question_id: int):
+    try:
+        # Get topics for this question from the mapping table
+        topic_response = supabase.table('assignment_questions<>topic').select(
+            'topic_id'
+        ).eq('question_id', question_id).execute()
+        if not topic_response or not topic_response.data:
+            return []
+            
+        # Get topic details for each topic_id
+        topic_ids = [t['topic_id'] for t in topic_response.data]
+        topics_response = supabase.table('topic').select(
+            'id,title'
+        ).in_('id', topic_ids).execute()
+        
+        if not topics_response or not topics_response.data:
+            return []
+            
+        return topics_response.data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
