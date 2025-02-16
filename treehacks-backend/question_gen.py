@@ -9,6 +9,7 @@ import base64
 import io
 import requests
 from supabase import create_client, Client
+from topic_utils import get_topics_for_question_generation, categorize_question
 
 # Initialize Supabase client
 url: str = os.environ.get("SUPABASE_URL")
@@ -17,7 +18,7 @@ supabase: Client = create_client(url, key)
 
 def setup_gemini():
     """Initialize Gemini API with key"""
-    api_key = "AIzaSyBvK_qSGnPZuCFPjMf5cMbCxVYW0h1vSHg"
+    api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("API key not found")
     
@@ -182,6 +183,8 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         
         Format each question as a JSON object with these fields:
         - question: The actual question text
+        - answer: The correct answer
+        - explanation: Brief explanation of why this is correct
         
         Return exactly 3 questions in a JSON array. Return ONLY the JSON array, no other text or formatting."""
         
@@ -206,71 +209,68 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         if not response_text:
             raise ValueError("Empty response from model after cleanup")
         
-        # Parse response as JSON
-        try:
-            questions = json.loads(response_text)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse model response as JSON: {str(e)}\nResponse text: {response_text}")
+        # Parse questions and add topic IDs
+        questions = json.loads(response_text)
         
+        # Categorize each question into topics
+        for question in questions:
+            # Use LLM to categorize the question into multiple topics
+            question["topic_ids"] = categorize_question(
+                question["question"], 
+                question.get("explanation", "")
+            )
+            print(question, question["topic_ids"])
+            
         # Validate response structure
         if not isinstance(questions, list):
-            raise ValueError(f"Response is not a list of questions. Got type: {type(questions)}")
+            raise ValueError(f"Response is not a list. Got type: {type(questions)}")
         if len(questions) != 3:
             raise ValueError(f"Did not receive exactly 3 questions. Got {len(questions)} questions")
         
         # Validate each question has required fields
-        required_fields = {"question"}
+        required_fields = {"question", "answer", "explanation", "topic_ids"}
         for i, q in enumerate(questions):
             if not isinstance(q, dict):
                 raise ValueError(f"Question {i} is not a dictionary. Got type: {type(q)}")
             missing_fields = required_fields - set(q.keys())
             if missing_fields:
-                raise ValueError(f"Question {i} missing required fields: {missing_fields}")
-        
-        # Get session data to know how many questions we already have
-        existing_questions_response = supabase.table('session_questions').select('question_number').eq('session_id', session_id).execute()
-        if not existing_questions_response['data']:
-            next_question_number = 1
-        else:
-            next_question_number = len(existing_questions_response['data']) + 1
-        
-        # Add metadata and save to Supabase
-        saved_questions = []
-        for i, q in enumerate(questions, start=next_question_number):
-            try:
-                # Prepare data for Supabase - only include fields that exist in the table
-                question_data = {
+                raise ValueError(f"Question {i} is missing required fields: {missing_fields}")
+                
+        try:
+            # Save questions to database
+            for i, q in enumerate(questions):
+                # For each topic ID, create a separate question-topic mapping
+                base_question_data = {
                     'session_id': session_id,
                     'question_number': i,
-                    'question_text': q["question"]
+                    'question_text': q["question"],
+                    # 'answer': q["answer"],
+                    # 'explanation': q["explanation"]
                 }
                 
-                print(f"Inserting question {i} with data:", json.dumps(question_data, indent=2))
+                # Insert the question first
+                question_response = supabase.table('session_questions').insert(base_question_data).execute()
+                if not question_response["data"]:
+                    raise ValueError(f"Failed to insert question {i}")
+                question_id = question_response["data"][0]['id']
                 
-                # Save to Supabase
-                try:
-                    result = supabase.table('session_questions').insert(question_data).execute()
-                    print(f"Full Supabase response:", result)
-                    
-                    if not result.get('data'):
-                        error_msg = f"No data returned from Supabase insert. Full response: {result}"
-                        print(error_msg)
-                        raise ValueError(error_msg)
-                        
-                    # Store the full question data in memory even though we only save part to Supabase
-                    q['id'] = result['data'][0]['id']
-                    saved_questions.append(q)
-                    
-                except Exception as e:
-                    print(f"Supabase insert error: {str(e)}")
-                    raise
+                # Create question-topic mappings
+                for topic_id in q["topic_ids"]:
+                    mapping_data = {
+                        'question_id': question_id,
+                        'topic_id': topic_id
+                    }
+                    mapping_response = supabase.table('session_questions<>topic').insert(mapping_data).execute()
+                    if not mapping_response["data"]:
+                        print(f"Warning: Failed to create topic mapping for question {question_id} and topic {topic_id}")
                 
-            except Exception as e:
-                error_msg = f"Error saving question {i} to Supabase: {str(e)}\nQuestion data: {json.dumps(question_data, indent=2)}"
-                print(error_msg)
-                raise ValueError(error_msg)
+                print(f"Inserted question {i} with {len(q['topic_ids'])} topics")
+                
+        except Exception as e:
+            print(f"Error saving questions to database: {str(e)}")
+            raise
         
-        return saved_questions
+        return questions
         
     except Exception as e:
         error_msg = f"Error generating questions: {str(e)}"
@@ -288,7 +288,7 @@ def save_questions(questions: List[Dict], output_dir: str):
     os.makedirs(output_dir, exist_ok=True)
     
     # Use timestamp of first question as filename
-    timestamp = questions[0]["timestamp"]
+    timestamp = datetime.now().timestamp()
     output_path = os.path.join(output_dir, f"questions_t{timestamp:.1f}.json")
     
     with open(output_path, "w") as f:

@@ -13,6 +13,7 @@ from video_utils import extract_audio
 from speech_to_text import transcribe_with_timestamps
 from slide_utils import map_slides_to_video
 from question_gen import generate_questions, save_questions
+from topic_utils import get_all_topics, get_topic_by_id
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -221,6 +222,7 @@ async def get_lecture(lecture_id: str):
 async def get_lecture_sessions(lecture_id: str):
     result = supabase.table('sessions').select('*').eq('lecture_id', lecture_id).order('created_at', desc=True).execute()
     return result.data
+
 @app.post("/transcribe/{video_name}")
 def transcribe_video_endpoint(video_name: str):
     """
