@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useClass } from "../context/ClassContext"
+import { Badge } from "@/components/ui/badge"
 
 interface Assignment {
   id: string;
@@ -188,7 +189,7 @@ export default function Assignments() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px] text-base">Name</TableHead>
+                    <TableHead className="w-[400px] text-base">Name</TableHead>
                     <TableHead className="text-base">Deadline</TableHead>
                     <TableHead className="text-right text-base">Submissions</TableHead>
                     <TableHead className="text-right text-base">Actions</TableHead>
@@ -197,17 +198,22 @@ export default function Assignments() {
                 <TableBody>
                   {assignments.map((assignment) => (
                     <TableRow key={assignment.id}>
-                      <TableCell className="font-medium text-lg">
-                        <Link href={`/assignments/${assignment.id}`} className="hover:underline">
-                          {assignment.name}
-                        </Link>
+                      <TableCell className="font-medium text-lg px-4 py-2">
+                        <div className="flex items-center gap-4">
+                          <Link href={`/assignments/${assignment.id}`} className="hover:underline">
+                            {assignment.name}
+                          </Link>
+                          {new Date(assignment.due_date) < new Date() && (
+                            <Badge variant="destructive">Closed</Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-lg">{assignment.due_date}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-lg px-4 py-2">{assignment.due_date}</TableCell>
+                      <TableCell className="text-right px-4 py-2">
                         {/* Add graded count here if available */}
                         0
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right px-4 py-2">
                         <Button 
                           variant="secondary"
                           onClick={() => handleRunNLP(assignment.id)}

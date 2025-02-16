@@ -329,7 +329,7 @@ export default function Home() {
                     filteredTopics
                       .sort((a, b) => (b.mastery_level || 0) - (a.mastery_level || 0))
                       .map((topic) => (
-                        <div key={topic.id} className="p-8 rounded-lg border bg-card">
+                        <div key={topic.id} href={`/topics/${topic.id}`} className="p-8 rounded-lg border bg-card">
                           <div className="flex justify-between items-start mb-4">
                             <div className="text-xl font-medium">{topic.title}</div>
                             <div className="flex gap-2">
