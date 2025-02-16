@@ -631,7 +631,7 @@ async def close_session(short_id: str):
     return result.data[0]
 
 @app.get("/api/session_questions/{question_id}/topics")
-async def get_question_topics(question_id: int):
+async def get_question_topics(question_id: str):
     try:
         # Get topics for this question from the mapping table
         topic_response = supabase.table('session_questions<>topic').select(
