@@ -694,3 +694,20 @@ async def run_session_grading_nlp(short_id: str):
     except Exception as e:
         print(f"Error in run_session_nlp: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/sessions/{session_id}/insight")
+async def get_session_insight(session_id: str):
+    try:
+        # First get the session ID from the short_id
+        short_id = session_id.upper()
+        result = supabase.table("sessions").select("id").eq("short_id", short_id).execute()
+        session_id = result.data[0]["id"]
+        
+        # Get the insight
+        insight_result = supabase.table("session_insight").select("*").eq("session_id", session_id).execute()
+        if not insight_result.data:
+            raise HTTPException(status_code=404, detail="Session insight not found")
+            
+        return insight_result.data[0]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

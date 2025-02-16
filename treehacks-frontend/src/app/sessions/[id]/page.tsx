@@ -8,6 +8,7 @@ import { useEffect, useState } from "react"
 import { CloseSessionButton } from "@/components/close-session-button"
 import { createClient } from '@supabase/supabase-js'
 import { useClass } from "@/app/context/ClassContext"
+import ReactMarkdown from 'react-markdown'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -39,6 +40,7 @@ interface Session {
     id: string
     name: string
   }
+  summary?: string
 }
 
 const formatDate = (dateString: string) => {
@@ -92,6 +94,15 @@ export default function SessionInsights() {
           if (lectureResponse.ok) {
             const lecture = await lectureResponse.json()
             data.lecture = lecture
+          }
+        }
+
+        // Fetch session insight if session is not active
+        if (!data.active) {
+          const insightResponse = await fetch(`http://localhost:8000/api/sessions/${sessionId}/insight`)
+          if (insightResponse.ok) {
+            const insight = await insightResponse.json()
+            data.summary = insight.summary
           }
         }
 
@@ -282,13 +293,15 @@ export default function SessionInsights() {
                 </CardHeader>
                 <CardContent className="p-8 pt-0">
                   <div className="space-y-4">
-                    <p className="text-lg">
-                      Based on the responses received, students demonstrated a good understanding of the material.
-                      The average correctness rate was approximately 65%, with some questions showing particularly strong performance.
-                    </p>
-                    <p className="text-lg">
-                      Areas for potential review include concepts covered in questions 2 and 4, where students showed more varied responses.
-                    </p>
+                    {session.summary ? (
+                      <ReactMarkdown className="text-lg space-y-4">
+                        {session.summary}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="text-lg text-gray-500 italic">
+                        Summary will be available once the session is closed and analyzed.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
