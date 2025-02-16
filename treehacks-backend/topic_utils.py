@@ -22,9 +22,9 @@ def get_all_topics() -> List[Dict]:
     """Get all topics from the topics table."""
     try:
         response = supabase.table('topic').select('*').execute()
-        if not response or 'data' not in response:
+        if not response or not response.data:
             raise Exception("Invalid response from Supabase")
-        return response['data']
+        return response.data
     except Exception as e:
         raise Exception(f"Error fetching topics: {str(e)}")
 
@@ -32,11 +32,11 @@ def get_topic_by_id(topic_id: str) -> Dict:
     """Get a specific topic by ID."""
     try:
         response = supabase.table('topic').select('*').eq('id', topic_id).execute()
-        if not response or 'data' not in response:
-            raise Exception("Invalid response from Supabase")
-        if not response['data']:
+        if not response or not response.data:
             raise Exception("Topic not found")
-        return response['data'][0]
+        if len(response.data) == 0:
+            raise Exception(f"Topic with id {topic_id} not found")
+        return response.data[0]
     except Exception as e:
         raise Exception(f"Error fetching topic: {str(e)}")
 

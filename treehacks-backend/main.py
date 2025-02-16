@@ -117,40 +117,37 @@ async def get_progress(short_id: str):
         session_result = (supabase.table('sessions')
             .select('id')
             .eq('short_id', short_id)
-            .single()
             .execute())
         
         if not session_result.data:
             raise HTTPException(status_code=404, detail="Session not found")
             
-        session_id = session_result.data['id']
+        session_id = session_result.data[0]['id']
         
         # Get the first question's ID
         question_result = (supabase.table('session_questions')
             .select('id')
             .eq('question_number', 1)
             .eq('session_id', session_id)
-            .single()
             .execute())
         
         if not question_result.data:
             # If no questions exist yet, return 0 responses
             return {'response_count': 0}
             
-        question_id = question_result.data['id']
+        question_id = question_result.data[0]['id']
         
         # Get response count for the first question
         count_result = (supabase.table('session_question_response_count')
             .select('response_count')
             .eq('session_question_id', question_id)
-            .single()
             .execute())
         
         # If no responses yet, return 0
         if not count_result.data:
             return {'response_count': 0}
             
-        return count_result.data
+        return count_result.data[0]
         
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -319,17 +316,19 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
     """
     try:
         # Verify lecture exists
-        lecture_response = supabase.table('lectures').select('*').eq('id', lecture_id).single().execute()
-        if not lecture_response['data']:
+        lecture_response = supabase.table('lectures').select('*').eq('id', lecture_id).execute()
+        if not lecture_response or not lecture_response.data:
             raise HTTPException(status_code=404, detail=f"Lecture {lecture_id} not found")
+        lecture = lecture_response.data[0]
             
         # Verify session exists
-        session_response = supabase.table('sessions').select('*').eq('id', session_id).single().execute()
-        if not session_response['data']:
+        session_response = supabase.table('sessions').select('*').eq('id', session_id).execute()
+        if not session_response or not session_response.data:
             raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+        session = session_response.data[0]
             
         # Generate and save questions
-        timestamp = session_response['data']['timestamp']
+        timestamp = float(session['timestamp']) if 'timestamp' in session else 0.0
         questions = generate_questions(lecture_id, session_id, timestamp)
         
         return {
@@ -341,7 +340,7 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error generating questions: {str(e)}"
+            detail=str(e)
         )
 
 @app.get("/assignment", response_model=list[AssignmentResponse])
@@ -355,10 +354,10 @@ async def list_assignment():
 @app.get("/assignment/{assignment_id}", response_model=AssignmentResponse)
 async def get_assignment_details(assignment_id: int):
     try:
-        response = supabase.table("assignment").select("*").eq("id", assignment_id).single().execute()
+        response = supabase.table("assignment").select("*").eq("id", assignment_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Assignment not found")
-        return response.data
+        return response.data[0]
     except Exception as e:
         print(f"Error in get_assignment_details: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -366,10 +365,10 @@ async def get_assignment_details(assignment_id: int):
 @app.get("/assignment/{assignment_id}/insight", response_model=AssignmentInsightResponse)
 async def get_assignment_insight(assignment_id: int):
     try:
-        response = supabase.table("assignment_insight").select("*").eq("assignment_id", assignment_id).single().execute()
+        response = supabase.table("assignment_insight").select("*").eq("assignment_id", assignment_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Assignment insight not found")
-        return response.data
+        return response.data[0]
     except Exception as e:
         print(f"Error in get_assignment_insight: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

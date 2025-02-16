@@ -81,73 +81,59 @@ def get_context_until_timestamp(lecture_id: str, session_id: str, timestamp: flo
         List of content items (images and text) for Gemini
     """
     try:
-        # Get lecture data from Supabase
-        lecture_response = supabase.table('lectures').select('*').eq('id', lecture_id).single().execute()
-        if not lecture_response['data']:
+        # Get lecture info
+        lecture_result = supabase.table('lectures').select('*').eq('id', lecture_id).execute()
+        if not lecture_result or not lecture_result.data:
             raise ValueError(f"Lecture {lecture_id} not found")
         
+        # Since we're querying by ID, we expect only one result
+        lecture = lecture_result.data[0]
+        
         # Get slide mappings and transcription from lecture data
-        lecture_data = lecture_response['data']
-        if not lecture_data.get('slide_mappings'):
+        if not lecture.get('slide_mappings'):
             raise ValueError("No slide mappings found in lecture data")
-        if not lecture_data.get('audio_transcription'):
+        if not lecture.get('audio_transcription'):
             raise ValueError("No audio transcription found in lecture data")
-        if not lecture_data.get('slides'):
+        if not lecture.get('slides'):
             raise ValueError("No slides URL found in lecture data")
             
-        slide_mappings = lecture_data['slide_mappings']
-        transcription = lecture_data['audio_transcription']
+        slide_mappings = lecture['slide_mappings']
+        transcription = lecture['audio_transcription']
         
         # Convert PDF slides to images
-        all_slides = download_and_convert_pdf(lecture_data['slides'])
+        all_slides = download_and_convert_pdf(lecture['slides'])
         if not all_slides:
             raise ValueError("No slides were converted from PDF")
         
-        # Get slides up to timestamp
-        relevant_slide_numbers = []
-        for change in slide_mappings.get("slide_timestamps", []):
-            if float(change["timestamp"]) <= timestamp:
-                relevant_slide_numbers.append(change["slide"] - 1)  # Convert to 0-based index
-        
-        # Get the unique, latest slides shown up to this point
-        if relevant_slide_numbers:
-            latest_slide_index = max(relevant_slide_numbers)
-            if latest_slide_index >= len(all_slides):
-                raise ValueError(f"Slide index {latest_slide_index} is out of range (total slides: {len(all_slides)})")
-            relevant_slides = [all_slides[i] for i in range(latest_slide_index + 1)]
-        else:
-            relevant_slides = []
-            
-        # Get transcript up to timestamp
-        relevant_transcript = []
-        for segment in transcription.get("segments", []):
-            if float(segment["start"]) <= timestamp:
-                relevant_transcript.append(segment["text"])
+        # Get transcript segments up to timestamp from the audio_transcription
+        transcript_segments = []
+        for segment in transcription.get('segments', []):
+            if float(segment['start']) <= timestamp:
+                transcript_segments.append(segment)
+        # Get current slide based on timestamp
+        current_slide_num = 0
+        for mapping in slide_mappings["slide_timestamps"]:
+            if float(mapping['timestamp']) <= timestamp:
+                current_slide_num = int(mapping['slide'])
+            else:
+                break
                 
-        if not relevant_transcript:
-            raise ValueError(f"No transcript segments found before timestamp {timestamp}")
-        
-        # Create content items for each slide and the transcript
+        # Prepare content items for Gemini
         contents = []
         
-        # Add each slide as an image content item
-        for i, slide in enumerate(relevant_slides):
-            encoded_image = encode_pil_image(slide)
-            contents.append({
-                "mime_type": "image/jpeg",
-                "data": encoded_image
-            })
-            contents.append(f"Slide {i+1}")  # Add slide number after each image
-        
-        # Add transcript as the final text content
-        contents.append(f"""
-        Lecture Transcript up to timestamp {timestamp}s:
-        {' '.join(relevant_transcript)}
-        """)
-        
+        # Add current slide image
+        if current_slide_num < len(all_slides):
+            contents.append(all_slides[current_slide_num])
+            
+        # Add transcript text
+        if transcript_segments:
+            transcript_text = " ".join([seg['text'] for seg in transcript_segments])
+            contents.append(transcript_text)
+            
         return contents
-        
+            
     except Exception as e:
+        print(f"Error getting context: {str(e)}")
         raise ValueError(f"Error getting context: {str(e)}")
 
 def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> List[Dict]:
@@ -170,10 +156,17 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         contents = get_context_until_timestamp(lecture_id, session_id, timestamp)
         if not contents:
             raise ValueError("No content was retrieved from lecture")
+            
+        # Get lecture info to get number of questions
+        lecture_result = supabase.table('lectures').select('*').eq('id', lecture_id).execute()
+        if not lecture_result or not lecture_result.data:
+            raise ValueError(f"Lecture {lecture_id} not found")
+        lecture = lecture_result.data[0]
+        num_questions = lecture.get('num_questions', 3)  # default to 3 if not specified
         
         # Add the instruction prompt as the first content item
-        prompt = """You are an expert teaching assistant helping to generate questions to test student understanding.
-        Based on the lecture slides (shown as images) and transcript provided, generate 3 questions that test student comprehension
+        prompt = f"""You are an expert teaching assistant helping to generate questions to test student understanding.
+        Based on the lecture slides (shown as images) and transcript provided, generate {num_questions} questions that test student comprehension
         of the key concepts covered so far. Each question should with an emphasis on the most recent slide shown and test big picture concepts:
         1. Test understanding, not just recall
         2. Be clear and unambiguous
@@ -186,7 +179,7 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
         - answer: The correct answer
         - explanation: Brief explanation of why this is correct
         
-        Return exactly 3 questions in a JSON array. Return ONLY the JSON array, no other text or formatting."""
+        Return exactly {num_questions} questions in a JSON array. Return ONLY the JSON array, no other text or formatting."""
         
         contents.insert(0, prompt)
         
@@ -219,13 +212,13 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
                 question["question"], 
                 question.get("explanation", "")
             )
-            print(question, question["topic_ids"])
+            # print(question, question["topic_ids"])
             
         # Validate response structure
         if not isinstance(questions, list):
             raise ValueError(f"Response is not a list. Got type: {type(questions)}")
-        if len(questions) != 3:
-            raise ValueError(f"Did not receive exactly 3 questions. Got {len(questions)} questions")
+        if len(questions) != num_questions:
+            raise ValueError(f"Did not receive exactly {num_questions} questions. Got {len(questions)} questions")
         
         # Validate each question has required fields
         required_fields = {"question", "answer", "explanation", "topic_ids"}
@@ -250,9 +243,10 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
                 
                 # Insert the question first
                 question_response = supabase.table('session_questions').insert(base_question_data).execute()
-                if not question_response["data"]:
+                if not question_response or not question_response.data:
                     raise ValueError(f"Failed to insert question {i}")
-                question_id = question_response["data"][0]['id']
+                question_id = question_response.data[0]["id"]
+
                 
                 # Create question-topic mappings
                 for topic_id in q["topic_ids"]:
@@ -261,16 +255,14 @@ def generate_questions(lecture_id: str, session_id: str, timestamp: float) -> Li
                         'topic_id': topic_id
                     }
                     mapping_response = supabase.table('session_questions<>topic').insert(mapping_data).execute()
-                    if not mapping_response["data"]:
-                        print(f"Warning: Failed to create topic mapping for question {question_id} and topic {topic_id}")
-                
-                print(f"Inserted question {i} with {len(q['topic_ids'])} topics")
-                
+                    if not mapping_response or not mapping_response.data:
+                        raise ValueError(f"Failed to create mapping for question {question_id} and topic {topic_id}")
+                        
+            return questions
+            
         except Exception as e:
             print(f"Error saving questions to database: {str(e)}")
-            raise
-        
-        return questions
+            raise ValueError(f"Error saving questions to database: {str(e)}")
         
     except Exception as e:
         error_msg = f"Error generating questions: {str(e)}"
