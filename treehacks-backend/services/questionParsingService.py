@@ -96,16 +96,18 @@ async def parse_and_store_questions(assignment_id: int, pdf_path: str) -> List[D
     try:
         # Extract text from PDF
         text = extract_text_from_pdf(pdf_path)
+        print('extracted text')
         
         # Split into questions
         questions = await split_into_questions(text)
+        print("split into questions")
         
         # Store each question in Supabase
         stored_questions = []
         for question in questions:
             # Insert question into homework_question table
-            response = supabase.table("homework_question").insert({
-                "homework_id": assignment_id,
+            response = supabase.table("assignment_question").insert({
+                "assignment_id": assignment_id,
                 "problem_number": question["number"],
                 "text": question["text"]
             }).execute()
