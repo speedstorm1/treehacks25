@@ -13,6 +13,8 @@ from video_utils import extract_audio
 from speech_to_text import transcribe_with_timestamps
 from slide_utils import map_slides_to_video
 from question_gen import generate_questions, save_questions
+from llm_utils import extract_topics_from_syllabus
+import requests
 
 load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
@@ -56,21 +58,6 @@ def setup():
     download_lecture_and_slides()
     return {"message": "Setup complete"}
 
-class SessionCreate(BaseModel):
-    title: str
-    num_questions: int
-    lecture_id: str
-    timestamp: float
-
-class LectureCreate(BaseModel):
-    name: str
-    slides: str | None = None
-    lecture_video: str | None = None
-
-class ResponseCreate(BaseModel):
-    question_id: str
-    response_text: str
-
 #given title, num questions, and lecture id, create a session
 @app.post("/api/sessions")
 async def create_session(session: SessionCreate):
@@ -112,45 +99,53 @@ async def get_session(short_id: str):
 #get progress given the session id (number of submissions)
 @app.get("/api/sessions/{short_id}/progress")
 async def get_progress(short_id: str):
-    short_id = short_id.upper()
-    
-    # Get the first question's ID
-    result = (supabase.table('session_questions')
-        .select('id')
-        .eq('question_number', 1)
-        .eq('session_id', supabase.table('sessions')
+    try:
+        short_id = short_id.upper()
+        
+        # First get the session
+        session_result = (supabase.table('sessions')
             .select('id')
             .eq('short_id', short_id)
             .single()
-            .execute()
-            .data['id'])
-        .single()
-        .execute())
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    # Get response count for the first question
-    result = (supabase.table('session_question_response_count')
-        .select('response_count')
-        .eq('session_question_id', result.data['id'])
-        .single()
-        .execute())
-    
-    return result.data or {'response_count': 0}
-
-#close a session given the session id
-@app.patch("/api/sessions/{short_id}/close")
-async def close_session(short_id: str):
-    # Convert to uppercase to make it case-insensitive
-    short_id = short_id.upper()
-    
-    result = supabase.table('sessions').update({'active': False}).eq('short_id', short_id).execute()
-    
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return result.data[0]
+            .execute())
+        
+        if not session_result.data:
+            raise HTTPException(status_code=404, detail="Session not found")
+            
+        session_id = session_result.data['id']
+        
+        # Get the first question's ID
+        question_result = (supabase.table('session_questions')
+            .select('id')
+            .eq('question_number', 1)
+            .eq('session_id', session_id)
+            .single()
+            .execute())
+        
+        if not question_result.data:
+            # If no questions exist yet, return 0 responses
+            return {'response_count': 0}
+            
+        question_id = question_result.data['id']
+        
+        # Get response count for the first question
+        count_result = (supabase.table('session_question_response_count')
+            .select('response_count')
+            .eq('session_question_id', question_id)
+            .single()
+            .execute())
+        
+        # If no responses yet, return 0
+        if not count_result.data:
+            return {'response_count': 0}
+            
+        return count_result.data
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        print(f"Error getting progress: {str(e)}")
+        return {'response_count': 0}
 
 #get all questions for a session given the session id
 @app.get("/api/sessions/questions/{short_id}")
@@ -221,6 +216,7 @@ async def get_lecture(lecture_id: str):
 async def get_lecture_sessions(lecture_id: str):
     result = supabase.table('sessions').select('*').eq('lecture_id', lecture_id).order('created_at', desc=True).execute()
     return result.data
+
 @app.post("/transcribe/{video_name}")
 def transcribe_video_endpoint(video_name: str):
     """
@@ -332,3 +328,97 @@ async def generate_questions_endpoint(lecture_id: str, session_id: str):
             status_code=500,
             detail=f"Error generating questions: {str(e)}"
         )
+
+@app.get("/api/topics")
+async def get_topics():
+    result = supabase.table('topic').select('*').execute()
+    return result.data or []
+
+@app.patch("/api/topic/modify/{topic_id}")
+async def modify_topic(topic_id: str, topic: TopicUpdate):
+    result = supabase.table('topic').update({"title": topic.title}).eq('id', topic_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    
+    return result.data[0]
+
+@app.post("/api/topic/add")
+async def add_topic(topic: TopicUpdate):
+    result = supabase.table('topic').insert({"title": topic.title, "mastery_level": 0}).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=500, detail="Failed to add topic")
+    
+    return result.data[0]
+
+@app.post("/api/topic/delete/{topic_id}")
+async def delete_topic(topic_id: str):
+    result = supabase.table('topic').delete().eq('id', topic_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    
+    return result.data[0]
+
+@app.post("/api/topic/generate")
+async def generate_topic(syllabus: Syllabus):
+    try:
+        # For now, we'll use a simple GET request to fetch the syllabus content
+        # In production, you'd want to handle this more securely
+        response = requests.get(syllabus.syllabus_url)
+        syllabus_text = response.text
+        
+        # Extract topics using OpenAI
+        topics = extract_topics_from_syllabus(syllabus_text)
+        
+        # Store topics in Supabase
+        for topic in topics:
+            result = supabase.table('topic').insert({
+                "title": topic,
+                "mastery_level": 0
+            }).execute()
+            
+            if not result.data:
+                print(f"Failed to insert topic: {topic}")
+        
+        return {"message": f"Generated and stored {len(topics)} topics", "topics": topics}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating topics: {str(e)}"
+        )
+
+#close a session given the session id
+@app.patch("/api/sessions/{short_id}/close")
+async def close_session(short_id: str):
+    # Convert to uppercase to make it case-insensitive
+    short_id = short_id.upper()
+    
+    result = supabase.table('sessions').update({'active': False}).eq('short_id', short_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return result.data[0]
+
+#get all questions for a session given the session id
+@app.get("/api/sessions/questions/{short_id}")
+async def get_questions(short_id: str):
+    # Convert to uppercase to make it case-insensitive
+    short_id = short_id.upper()
+    
+    result = supabase.table('sessions').select('*').eq('short_id', short_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session_id = result.data[0]['id']
+
+    result = supabase.table('session_questions').select('question_text', 'question_number', 'id').eq('session_id', session_id).execute()
+    
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    return result.data

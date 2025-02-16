@@ -81,7 +81,7 @@ export default function AddSession() {
 
   return (
     <div className="min-h-full p-8">
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
         <Breadcrumb
           items={[
             { label: "Home", href: "/" },
@@ -91,57 +91,50 @@ export default function AddSession() {
           ]}
         />
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl">Create New Session</CardTitle>
-            <CardDescription>
-              Add a new Q&A session for {lecture.name}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title">Session Name</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter session name"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="numQuestions">Number of Questions (1-4)</Label>
-                <Input
-                  id="numQuestions"
-                  type="number"
-                  min="1"
-                  max="4"
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(e.target.value)}
-                  required
-                />
-              </div>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">Create New Session</h1>
+        </div>
 
-              <div className="flex gap-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !title || parseInt(numQuestions) < 1 || parseInt(numQuestions) > 4}
-                >
+        <div className="grid grid-cols-1 gap-6 max-w-2xl">
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Session Details</CardTitle>
+              <CardDescription className="text-base">
+                Create a new Q&A session for {lecture.name}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Session Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numQuestions">Number of Questions</Label>
+                  <Input
+                    id="numQuestions"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={numQuestions}
+                    onChange={(e) => setNumQuestions(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? "Creating..." : "Create Session"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(`/lectures/${lectureId}`)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

@@ -77,7 +77,7 @@ export default function LecturePage() {
   if (isLoading || !lecture) {
     return (
       <div className="min-h-full p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-[2000px] mx-auto space-y-8">
           <LectureLoadingSkeleton />
         </div>
       </div>
@@ -86,66 +86,56 @@ export default function LecturePage() {
 
   return (
     <div className="min-h-full p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-[2000px] mx-auto space-y-8">
+        <Breadcrumb
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Lectures", href: "/lectures" },
+            { label: lecture.name, href: `/lectures/${lecture.id}` },
+          ]}
+        />
+
         <div className="flex justify-between items-center">
-          <Breadcrumb
-            items={[
-              { label: "Home", href: "/" },
-              { label: "Lectures", href: "/lectures" },
-              { label: lecture.name, href: `/lectures/${lecture.id}` },
-            ]}
-          />
-          <Button asChild>
+          <h1 className="text-3xl font-bold">{lecture.name}</h1>
+          <Button size="lg" asChild>
             <Link href={`/lectures/${lecture.id}/add-session?timestamp=${currentTime}`}>
+              <BookOpen className="mr-2 h-5 w-5" />
               Create Session
             </Link>
           </Button>
         </div>
 
-        <h1 className="text-3xl font-bold">{lecture.name}</h1>
-
-        <div className="grid gap-6">
-          <LectureContent 
-            lecture={lecture} 
-            onTimeUpdate={handleTimeUpdate}
-          />
+        <div className="grid grid-cols-1 gap-6">
+          <Card>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Lecture Content</CardTitle>
+              <CardDescription className="text-base">View lecture video and slides</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-0">
+              <Suspense fallback={<LectureContentSkeleton />}>
+                <LectureContent lecture={lecture} onTimeUpdate={handleTimeUpdate} />
+              </Suspense>
+            </CardContent>
+          </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Sessions
-              </CardTitle>
-              <CardDescription>
-                Active learning sessions for this lecture
-              </CardDescription>
+            <CardHeader className="p-8">
+              <CardTitle className="text-2xl">Q&A Sessions</CardTitle>
+              <CardDescription className="text-base">View all Q&A sessions for this lecture</CardDescription>
             </CardHeader>
-            <CardContent>
-              {sessions.length > 0 ? (
-                <div className="space-y-4">
-                  {sessions.map((session) => (
-                    <Card key={session.id}>
+            <CardContent className="p-8 pt-0">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {sessions.map((session) => (
+                  <Link key={session.id} href={`/sessions/${session.short_id}`}>
+                    <Card className="hover:bg-accent transition-colors">
                       <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">
-                            {session.title}
-                          </CardTitle>
-                          <Button variant="outline" asChild>
-                            <Link href={`/sessions/${session.short_id}`}>
-                              View Session
-                            </Link>
-                          </Button>
-                        </div>
-                        <CardDescription>
-                          {session.num_questions} questions • Session ID: {session.short_id}
-                        </CardDescription>
+                        <CardTitle>{session.title}</CardTitle>
+                        <CardDescription>{session.num_questions} questions</CardDescription>
                       </CardHeader>
                     </Card>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground">No sessions created yet</p>
-              )}
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -156,18 +146,51 @@ export default function LecturePage() {
 
 function LectureLoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse">
-      <div className="h-4 bg-muted rounded w-48" />
-      <div className="h-8 bg-muted rounded w-64" />
-      <div className="space-y-4">
-        <div className="h-[400px] bg-muted rounded" />
-        <div className="space-y-2">
-          <div className="h-4 bg-muted rounded w-32" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-24 bg-muted rounded" />
-        </div>
+    <>
+      <div className="h-8 w-96 bg-muted rounded animate-pulse" />
+      
+      <div className="flex justify-between items-center">
+        <div className="h-10 w-48 bg-muted rounded animate-pulse" />
+        <div className="h-10 w-32 bg-muted rounded animate-pulse" />
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader className="p-8">
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            <div className="aspect-video bg-muted rounded animate-pulse" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-8">
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <div className="space-y-2">
+                      <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   )
 }
 
