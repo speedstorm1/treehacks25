@@ -376,23 +376,32 @@ async def get_assignment_insight(assignment_id: int):
 @app.get("/assignment/{assignment_id}/question-insights", response_model=QuestionInsightsResponse)
 async def get_question_insights(assignment_id: int):
     try:
-        # First get all questions for this assignment with their problem numbers and text
-        questions = supabase.table("assignment_question").select("id,problem_number,text").eq("assignment_id", assignment_id).execute()
+        # First get all questions for this assignment with their problem numbers, text, and submission stats
+        questions = supabase.table("assignment_question").select(
+            "id,problem_number,text,total_submission,correct_submission"
+        ).eq("assignment_id", assignment_id).execute()
         if not questions.data:
             return {"insights": []}
             
-        # Create a mapping of question id to problem number and text
-        question_map = {q["id"]: {"problem_number": q["problem_number"], "text": q["text"]} for q in questions.data}
+        # Create a mapping of question id to question data
+        question_map = {q["id"]: {
+            "problem_number": q["problem_number"], 
+            "text": q["text"],
+            "total_submission": q["total_submission"] or 0,
+            "correct_submission": q["correct_submission"] or 0
+        } for q in questions.data}
         
         # Get insights for all questions
         question_ids = list(question_map.keys())
         insights = []
         for qid in question_ids:
             response = supabase.table("homework_question_extracted_insight").select("*").eq("question_id", qid).execute()
-            # Add problem_number and text to each insight
+            # Add question data to each insight
             for insight in response.data:
                 insight["problem_number"] = question_map[qid]["problem_number"]
                 insight["question_text"] = question_map[qid]["text"]
+                insight["total_submission"] = question_map[qid]["total_submission"]
+                insight["correct_submission"] = question_map[qid]["correct_submission"]
             insights.extend(response.data)
             
         return {"insights": insights}

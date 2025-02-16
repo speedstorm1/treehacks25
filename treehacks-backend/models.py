@@ -53,6 +53,8 @@ class QuestionInsight(BaseModel):
     created_at: str
     problem_number: int
     question_text: str
+    total_submission: int
+    correct_submission: int
 
 class QuestionInsightsResponse(BaseModel):
     insights: list[QuestionInsight]

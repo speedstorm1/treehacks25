@@ -2,10 +2,11 @@
 
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
-import { CustomPieChart } from "@/components/pie-chart"
+import { CustomPieChart, COLORS } from "@/components/pie-chart"
 import { Breadcrumb } from "@/components/breadcrumb"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import ReactMarkdown from 'react-markdown'
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons"
 
 interface QuestionInsight {
   id: number
@@ -15,6 +16,8 @@ interface QuestionInsight {
   created_at: string
   problem_number: number
   question_text: string
+  total_submission: number
+  correct_submission: number
 }
 
 interface AssignmentInsight {
@@ -78,11 +81,27 @@ export default function AssignmentInsights() {
       name: insight.error_summary,
       value: insight.error_count,
       problem_number: insight.problem_number,
-      question_text: insight.question_text
+      question_text: insight.question_text,
+      total_submission: insight.total_submission,
+      correct_submission: insight.correct_submission
     })
     groups[insight.question_id] = group
     return groups
-  }, {} as Record<number, { name: string; value: number; problem_number: number; question_text: string }[]>)
+  }, {} as Record<number, { 
+    name: string
+    value: number
+    problem_number: number
+    question_text: string
+    total_submission: number
+    correct_submission: number 
+  }[]>)
+
+  // Sort questions by correctness rate (ascending)
+  const sortedQuestionGroups = Object.entries(questionGroups).sort(([, a], [, b]) => {
+    const aRate = a[0].correct_submission / (a[0].total_submission || 1)
+    const bRate = b[0].correct_submission / (b[0].total_submission || 1)
+    return aRate - bRate
+  })
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
@@ -131,29 +150,57 @@ export default function AssignmentInsights() {
         )}
 
         <div className="grid grid-cols-2 gap-6">
-          {Object.entries(questionGroups).map(([questionId, errors]) => (
-            <Card key={questionId}>
-              <CardHeader className="p-8">
-                <CardTitle className="text-xl">Problem {errors[0]?.problem_number}</CardTitle>
-                <CardDescription className="mt-2 text-gray-600">
-                  {errors[0]?.question_text}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                <div className="h-[300px]">
-                  <CustomPieChart data={errors.map(e => ({ name: e.name, value: e.value }))} />
-                </div>
-                <div className="mt-4">
-                  {errors.map((error, index) => (
-                    <div key={index} className="flex justify-between text-sm text-gray-600">
-                      <span>{error.name}</span>
-                      <span>{error.value} occurrences</span>
+          {sortedQuestionGroups.map(([questionId, errors]) => {
+            const correctRate = errors[0].correct_submission / (errors[0].total_submission || 1)
+            const isUrgent = correctRate < 0.5 && errors[0].total_submission > 0
+
+            return (
+              <Card key={questionId} className={isUrgent ? "border-red-400" : ""}>
+                <CardHeader className="p-8">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        Problem {errors[0]?.problem_number}
+                        {isUrgent && (
+                          <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-2 text-gray-600">
+                        {errors[0]?.question_text}
+                      </CardDescription>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <div className="text-right">
+                      <div className="text-sm font-medium">
+                        {errors[0].correct_submission} / {errors[0].total_submission}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        correct
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 pt-0">
+                  <div className="h-[300px]">
+                    <CustomPieChart data={errors.map(e => ({ name: e.name, value: e.value }))} />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {errors.map((error, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          />
+                          <span className="text-gray-600">{error.name}</span>
+                        </div>
+                        <span className="text-gray-600">{error.value} occurrences</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
     </div>
