@@ -5,6 +5,8 @@
   <p>Bridging the gap between professors and students with real-time insights</p>
 </div>
 
+Demo: https://www.youtube.com/watch?v=OtibH1TkmZw
+
 ## 💡 Inspiration
 
 Education is evolving, but professors often struggle to gauge real-time student understanding during lectures or identify key learning gaps from homework. Inspired by the idea of using AI to bridge this gap, we set out to build a solution that provides professors with deeper, actionable insights—making classrooms more interactive and helping students succeed.
